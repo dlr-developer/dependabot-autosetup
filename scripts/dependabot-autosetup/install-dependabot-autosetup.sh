@@ -69,17 +69,29 @@ echo "  README.md"
 echo "  unblock-screenshot-windows.png"
 echo ""
 
-# Auto-launch the tool. When this installer itself was run via `curl ... | bash`,
-# stdin is the pipe carrying this script's own text, not your keyboard -- so we
-# explicitly redirect the launched script's stdin to the real terminal, or its
-# interactive prompts would silently break. If no terminal is actually available
-# (e.g. a non-interactive/CI context), skip auto-launch and just show the command.
-if (exec 3< /dev/tty) 2>/dev/null; then
-  exec 3<&-
-  echo "Launching dependabot-autosetup.sh..."
-  echo ""
-  "$TARGET_DIR/dependabot-autosetup.sh" < /dev/tty
+# Check if --no-launch flag is passed
+NO_LAUNCH=false
+for arg in "$@"; do
+  if [ "$arg" = "--no-launch" ]; then
+    NO_LAUNCH=true
+  fi
+done
+
+if [ "$NO_LAUNCH" = "true" ]; then
+  echo "Installation complete. Skipping auto-launch as requested."
 else
-  echo "Run it with: ./$TARGET_DIR/dependabot-autosetup.sh"
-  echo "Or on Windows, double-click $TARGET_DIR/dependabot-autosetup.bat"
+  # Auto-launch the tool. When this installer itself was run via `curl ... | bash`,
+  # stdin is the pipe carrying this script's own text, not your keyboard -- so we
+  # explicitly redirect the launched script's stdin to the real terminal, or its
+  # interactive prompts would silently break. If no terminal is actually available
+  # (e.g. a non-interactive/CI context), skip auto-launch and just show the command.
+  if (exec 3< /dev/tty) 2>/dev/null; then
+    exec 3<&-
+    echo "Launching dependabot-autosetup.sh..."
+    echo ""
+    "$TARGET_DIR/dependabot-autosetup.sh" < /dev/tty
+  else
+    echo "Run it with: ./$TARGET_DIR/dependabot-autosetup.sh"
+    echo "Or on Windows, double-click $TARGET_DIR/dependabot-autosetup.bat"
+  fi
 fi

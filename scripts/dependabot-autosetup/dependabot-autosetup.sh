@@ -63,6 +63,48 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   esac
 fi
 
+VERSION="1.1.0"
+
+# ================= Self-Updater Check =================
+# If running in a project that is NOT dlr-developer/dependabot-autosetup, check for updates
+IS_MAIN_REPO=false
+if git remote get-url origin 2>/dev/null | grep -q "dlr-developer/dependabot-autosetup"; then
+  IS_MAIN_REPO=true
+fi
+
+if [ "$IS_MAIN_REPO" != "true" ]; then
+  # Fetch latest version string from raw GitHub file
+  REMOTE_VERSION=$(curl -fsSL --max-time 3 "https://raw.githubusercontent.com/dlr-developer/dependabot-autosetup/main/scripts/dependabot-autosetup/dependabot-autosetup.sh" 2>/dev/null | grep -oP '^VERSION="\K[^"]+')
+  if [ -n "$REMOTE_VERSION" ] && [ "$REMOTE_VERSION" != "$VERSION" ]; then
+    echo -e "${C_WARN}────────────────────────────────────────${C_RESET}"
+    echo -e "${C_WARN}⚠️ UPDATE AVAILABLE: A new version of dependabot-autosetup is available! (v${REMOTE_VERSION})${C_RESET}"
+    echo -e "You are currently running v${VERSION}."
+    echo -e "Recommendation: Update now to receive the latest features and bug fixes."
+    echo -e "${C_WARN}────────────────────────────────────────${C_RESET}"
+    read -p "$(echo -e "${C_PROMPT}Would you like to auto-update? [y/N]: ${C_RESET}")" UPDATE_CONF
+    case "$UPDATE_CONF" in
+      y|Y)
+        echo -e "${C_OFF}Downloading updates...${C_RESET}"
+        if curl -fsSL "https://raw.githubusercontent.com/dlr-developer/dependabot-autosetup/main/scripts/dependabot-autosetup/install-dependabot-autosetup.sh" | bash -s -- --no-launch; then
+          echo -e "${C_ON}Updates downloaded and written locally.${C_RESET}"
+          # Commit the updated files to the current repository
+          git add scripts/dependabot-autosetup/ 2>/dev/null
+          if git commit -m "Auto-update dependabot-autosetup tool files to v${REMOTE_VERSION}" >/dev/null 2>&1; then
+            CURR_BRANCH=$(git branch --show-current)
+            if git push origin "$CURR_BRANCH" >/dev/null 2>&1; then
+              echo -e "${C_ON}Updates committed and pushed to GitHub.${C_RESET}"
+            fi
+          fi
+          echo -e "${C_ON}Restarting script...${C_RESET}"
+          exec bash "$0" "$@"
+        else
+          echo -e "${C_DANGER}Failed to download update helper. Continuing with current version...${C_RESET}"
+        fi
+        ;;
+    esac
+  fi
+fi
+
 KNOWN_ECOSYSTEMS="npm gradle pip bundler gomod docker docker-compose composer cargo maven mix pub elm swift nuget terraform devcontainers gitsubmodule github-actions bazel bun conda deno dotnet-sdk helm julia nix opentofu pre-commit rust-toolchain sbt uv vcpkg"
 SCRIPT_PATH="${SELF_DIR}/$(basename "$0")"
 NEWLY_ADDED_ECOS=()
