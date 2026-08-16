@@ -284,15 +284,31 @@ menu_unified_dashboard() {
             fi
             
             local risk_str="${C_ON}Low-Risk${C_RESET}"
-            [ "$is_high" = "true" ] && risk_str="${C_DANGER}High-Risk${C_RESET}"
+            local raw_risk="Low-Risk"
+            if [ "$is_high" = "true" ]; then
+              risk_str="${C_DANGER}High-Risk${C_RESET}"
+              raw_risk="High-Risk"
+            fi
             
-            # Format spacing and wrap description text cleanly under the DESCRIPTION column
+            # Print the text fields using matching column widths as the headers
+            # Note: printf cannot handle colors properly in width calculations, so we output them separately
+            local col_id col_repo col_pr col_risk
+            col_id=$(printf "%-4s" "$dashboard_counter")
+            col_repo=$(printf "%-15s" "$repo_name")
+            col_pr=$(printf "%-6s" "#${pr_num}")
+            col_risk=$(printf "%-12s" "$raw_risk")
+            
+            # Replace the plain text risk with the colored version for print
+            local color_risk_padded
+            color_risk_padded="${col_risk/Low-Risk/$risk_str}"
+            color_risk_padded="${color_risk_padded/High-Risk/$risk_str}"
+            
             local first_prefix
-            first_prefix=$(printf "  %-3d  %-15s  #%-5s %-12s  " "$dashboard_counter" "$repo_name" "$pr_num" "$risk_str")
+            first_prefix="  ${col_id}  ${col_repo}  ${col_pr}  ${color_risk_padded}  "
             
-            # 42 characters prefix spacing width. Wrap description to fit terminal width
+            # 47 characters total prefix space width. Wrap description to fit terminal width
             local term_width=80
-            local desc_width=$((term_width - 42))
+            local desc_width=$((term_width - 47))
             [ $desc_width -lt 30 ] && desc_width=30
             
             local wrapped_desc
@@ -304,7 +320,7 @@ menu_unified_dashboard() {
                 echo -e "${first_prefix}${line}"
               else
                 # Pad following wrapped lines so they line up perfectly under the first line
-                printf "                                          %s\n" "$line"
+                printf "                                               %s\n" "$line"
               fi
               line_idx=$((line_idx+1))
             done <<< "$wrapped_desc"
