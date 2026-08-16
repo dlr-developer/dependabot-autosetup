@@ -169,6 +169,12 @@ menu_bulk_setup() {
       local version
       version=$(get_local_version "${repos[$i]}")
       
+      # Check if git is initialized
+      local git_status=""
+      if [ ! -d "${repos[$i]}/.git" ]; then
+        git_status="${C_DANGER}[NO GIT INITIALIZED]${C_RESET} "
+      fi
+      
       local status_str=""
       if [ "$version" = "none" ]; then
         status_str="${C_OFF}(Not installed)${C_RESET}"
@@ -178,7 +184,7 @@ menu_bulk_setup() {
         status_str="${C_WARN}(v$version - Update Available)${C_RESET}"
       fi
       
-      echo -e "  $((i+1)) [ ] $(basename "${repos[$i]}") - ${repos[$i]} $status_str"
+      echo -e "  $((i+1)) [ ] ${git_status}$(basename "${repos[$i]}") - ${repos[$i]} $status_str"
     done
     echo ""
     echo -e "  ${C_HEADER}u)${C_RESET} Update All Outdated/Not-installed"
@@ -195,6 +201,11 @@ menu_bulk_setup() {
           local version
           version=$(get_local_version "$repo_path")
           if [ "$version" != "$VERSION" ]; then
+            # Auto init git if missing
+            if [ ! -d "$repo_path/.git" ]; then
+              echo -e "${C_WARN}Initializing git repository inside $repo_path ...${C_RESET}"
+              git -C "$repo_path" init -q -b main 2>/dev/null || git -C "$repo_path" init -q
+            fi
             echo -e "${C_OFF}Installing/updating in $repo_path ...${C_RESET}"
             mkdir -p "$repo_path/scripts/dependabot-autosetup"
             cp -r "${SELF_DIR}"/* "$repo_path/scripts/dependabot-autosetup/"
@@ -208,6 +219,11 @@ menu_bulk_setup() {
         for selected in $BULK_CHOICE; do
           if [[ "$selected" =~ ^[0-9]+$ ]] && [ "$selected" -ge 1 ] && [ "$selected" -le ${#repos[@]} ]; then
             local target_repo="${repos[selected-1]}"
+            # Auto init git if missing
+            if [ ! -d "$target_repo/.git" ]; then
+              echo -e "${C_WARN}Initializing git repository inside $target_repo ...${C_RESET}"
+              git -C "$target_repo" init -q -b main 2>/dev/null || git -C "$target_repo" init -q
+            fi
             echo -e "${C_OFF}Installing/updating in $target_repo ...${C_RESET}"
             mkdir -p "$target_repo/scripts/dependabot-autosetup"
             cp -r "${SELF_DIR}"/* "$target_repo/scripts/dependabot-autosetup/"
