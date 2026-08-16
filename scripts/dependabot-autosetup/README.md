@@ -112,8 +112,8 @@ Requires [Git for Windows](https://git-scm.com/download/win) (the `.bat` launche
 | 🔒 **Manages** | Toggle Dependabot security alert emails and repo visibility (public/private) via sub-menu |
 | 🔁 **Re-runnable** | Check status and change settings any time -- won't duplicate work already done |
 | ⚡ **Updates** | Lists open Dependabot PRs, evaluates their risk levels (low/high), lets you merge them interactively, and pulls updates locally in one step |
+| 🎛️ **Central Manager** | Unified PR status dashboard, version scanner, and multi-repo bulk installer for all your directories |
 | 🔄 **Auto-Updates** | Prompts you to auto-update and hot-reload when running the script if a new version is released |
-| 🧬 **Self-updating** | Looks up new Dependabot ecosystems automatically as GitHub adds support for them |
 
 ---
 
@@ -131,6 +131,33 @@ Requires [Git for Windows](https://git-scm.com/download/win) (the `.bat` launche
 8. You land on a status menu: re-run setup, push changes, configure features (auto-merge risk levels, alerts, repo visibility), check PRs & pull updates (with interactive risk-assessed merging), uninstall, or exit.
 
 **Every run after that:** it shows you the current status first, then the same menu -- nothing gets duplicated, and you can change any setting at any time by re-running the script.
+
+---
+
+## 🎛️ Centralized Manager & Dashboard
+
+For users managing multiple projects, `dependabot-manager.sh` (or `dependabot-manager.bat` on Windows) acts as a unified control center:
+
+### 1. Configure scan directories
+Choose custom folders to scan (e.g. `C:\Projects\Apps`, `C:\Projects\Websites`). The paths are saved locally in `manager-config.json`.
+
+### 2. Multi-Repo Installer / Bulk setup
+Scans your directories for git repositories and detects whether the tool is installed and its version. You can check multiple projects to install or update files to the latest version in one click.
+
+### 3. Unified Status Dashboard
+Queries open Dependabot PRs across all your projects. It aggregates them into a single terminal table complete with version bump summaries, risk levels, and lets you trigger remote merging in one view.
+
+Launch the manager from your main tool directory:
+
+**Git Bash / macOS / Linux:**
+```bash
+./scripts/dependabot-autosetup/dependabot-manager.sh
+```
+
+**PowerShell:**
+```powershell
+$bash = "$env:ProgramFiles\Git\bin\bash.exe"; if (!(Test-Path $bash)) { $bash = "${env:ProgramFiles(x86)}\Git\bin\bash.exe" }; & $bash scripts/dependabot-autosetup/dependabot-manager.sh
+```
 
 ---
 
