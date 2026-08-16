@@ -4,6 +4,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Status](https://img.shields.io/badge/status-active-brightgreen)
+![Version](https://img.shields.io/badge/version-1.1.0-orange)
 
 A single script that sets up [Dependabot](https://github.com/dependabot) on any repo -- detects your package ecosystem(s), writes the config, configures auto-merge for low/high-risk updates on your terms, and manages security alerts and repo visibility. Re-run it any time to check status and change settings.
 
