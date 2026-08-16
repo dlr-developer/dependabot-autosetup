@@ -15,7 +15,7 @@ A single script that sets up [Dependabot](https://github.com/dependabot) on any 
 
 ### Option 1: Curl install (any terminal)
 
-Pick the command for whichever terminal you're already in -- `cd` into your project folder first, then paste it.
+Pick the command for whichever terminal you're already in -- `cd` into your project folder first, then paste the curl installer command.
 
 **Git Bash / macOS / Linux:**
 
@@ -99,11 +99,12 @@ Requires [Git for Windows](https://git-scm.com/download/win) (the `.bat` launche
 | | |
 |---|---|
 | 🔍 **Detects** | Scans for manifest files across ~30 ecosystems (npm, cargo, pip, gradle, docker, and more) |
-| 📝 **Configures** | Writes `.github/dependabot.yml` with a weekly schedule per detected ecosystem |
+| 📝 **Configures** | Writes `.github/dependabot.yml` with a configurable schedule interval per detected ecosystem |
 | 🔀 **Auto-merges** | Optional GitHub Action for low-risk and/or high-risk updates -- your choice, explained at setup |
 | ✅ **Verifies** | Checks the target GitHub repo actually exists before pushing, offers to create it if not |
-| 🔒 **Manages** | Toggle Dependabot security alert emails and repo visibility (public/private) |
+| 🔒 **Manages** | Toggle Dependabot security alert emails and repo visibility (public/private) via sub-menu |
 | 🔁 **Re-runnable** | Check status and change settings any time -- won't duplicate work already done |
+| ⚡ **Updates** | Run Dependabot check checks manually and pull latest merged updates in one step |
 | 🧬 **Self-updating** | Looks up new Dependabot ecosystems automatically as GitHub adds support for them |
 
 ---
@@ -115,11 +116,11 @@ Requires [Git for Windows](https://git-scm.com/download/win) (the `.bat` launche
 1. If you installed via curl, it already launched automatically -- otherwise run `./scripts/dependabot-autosetup/dependabot-autosetup.sh` (or double-click `dependabot-autosetup.bat`) from inside your project.
 2. If GitHub CLI (`gh`) isn't installed or signed in, it'll offer to install it and walk you through sign-in -- your browser will open for a one-time code.
 3. It confirms which GitHub repo it's connected to (or asks you to enter one, and offers to create it -- public or private, your choice -- if it doesn't exist yet).
-4. It scans your project and lists the ecosystem(s) it found (npm, cargo, pip, etc.) and writes `.github/dependabot.yml`.
+4. It scans your project and lists the ecosystem(s) it found (npm, cargo, pip, etc.) and writes `.github/dependabot.yml` (after prompting you for check schedule interval: daily, weekly, or monthly).
 5. It explains **low-risk** (patch/minor) and **high-risk** (major) auto-merge separately, with a recommendation for each, and asks whether to turn them on.
 6. It shows current Dependabot security alert status for the repo and lets you turn it on/off.
 7. It asks to push -- creates a branch, commits, and opens/merges a PR for you (recommended, since it's just config files).
-8. You land on a status menu: re-run setup, toggle auto-merge risk levels, toggle alerts, toggle repo visibility, or exit.
+8. You land on a status menu: re-run setup, push changes, configure features (auto-merge risk levels, alerts, repo visibility), run Dependabot check & pull updates, uninstall, or exit.
 
 **Every run after that:** it shows you the current status first, then the same menu -- nothing gets duplicated, and you can change any setting at any time by re-running the script.
 
