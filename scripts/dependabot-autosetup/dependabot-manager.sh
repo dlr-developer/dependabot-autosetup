@@ -300,29 +300,55 @@ menu_unified_dashboard() {
   fi
 
   echo ""
-  read -p "$(echo -e "${C_PROMPT}Enter the number of the PR to merge, or 'b' to back: ${C_RESET}")" DB_MERGE_CHOICE
-  if [[ "$DB_MERGE_CHOICE" =~ ^[0-9]+$ ]] && [ "$DB_MERGE_CHOICE" -ge 1 ] && [ "$DB_MERGE_CHOICE" -lt "$dashboard_counter" ]; then
-    # Parse target PR
-    local matching_pr=""
-    for item in "${dashboard_prs[@]}"; do
-      if [[ "$item" =~ ^${DB_MERGE_CHOICE}\| ]]; then
-        matching_pr="$item"
-        break
-      fi
-    done
+  echo -e "  ${C_HEADER}1)${C_RESET} Select specific PR to merge"
+  echo -e "  ${C_HEADER}2)${C_RESET} Bulk merge ALL Low-Risk PRs"
+  echo -e "  ${C_HEADER}3)${C_RESET} Back to Main Menu"
+  echo ""
+  read -p "$(echo -e "${C_PROMPT}Choose an action: ${C_RESET}")" DB_OPT
+  case "$DB_OPT" in
+    1)
+      echo ""
+      read -p "$(echo -e "${C_PROMPT}Enter the number of the PR to merge: ${C_RESET}")" DB_MERGE_CHOICE
+      if [[ "$DB_MERGE_CHOICE" =~ ^[0-9]+$ ]] && [ "$DB_MERGE_CHOICE" -ge 1 ] && [ "$DB_MERGE_CHOICE" -lt "$dashboard_counter" ]; then
+        # Parse target PR
+        local matching_pr=""
+        for item in "${dashboard_prs[@]}"; do
+          if [[ "$item" =~ ^${DB_MERGE_CHOICE}\| ]]; then
+            matching_pr="$item"
+            break
+          fi
+        done
 
-    if [ -n "$matching_pr" ]; then
-      IFS='|' read -r pr_id pr_repo pr_num pr_title pr_risk <<< "$matching_pr"
-      echo -e "${C_OFF}Navigating to $pr_repo ...${C_RESET}"
-      cd "$pr_repo"
-      
-      echo -e "${C_OFF}Running merge verification for PR #${pr_num} ...${C_RESET}"
-      # Directly trigger target repo's dependabot merge flow
-      gh pr merge "$pr_num" --merge --delete-branch
-      
-      cd "$SELF_DIR"
-    fi
-  fi
+        if [ -n "$matching_pr" ]; then
+          IFS='|' read -r pr_id pr_repo pr_num pr_title pr_risk <<< "$matching_pr"
+          echo -e "${C_OFF}Navigating to $pr_repo ...${C_RESET}"
+          cd "$pr_repo"
+          
+          echo -e "${C_OFF}Running merge verification for PR #${pr_num} ...${C_RESET}"
+          # Directly trigger target repo's dependabot merge flow
+          gh pr merge "$pr_num" --merge --delete-branch
+          
+          cd "$SELF_DIR"
+        fi
+      fi
+      ;;
+    2)
+      echo ""
+      echo -e "${C_ON}Bulk merging all Low-Risk PRs...${C_RESET}"
+      for item in "${dashboard_prs[@]}"; do
+        IFS='|' read -r pr_id pr_repo pr_num pr_title pr_risk <<< "$item"
+        if [ "$pr_risk" = "false" ]; then
+          echo -e "${C_OFF}Navigating to $pr_repo ...${C_RESET}"
+          cd "$pr_repo"
+          echo -e "${C_OFF}Merging Low-Risk PR #${pr_num} (${pr_title})...${C_RESET}"
+          gh pr merge "$pr_num" --merge --delete-branch
+          cd "$SELF_DIR"
+        fi
+      done
+      ;;
+    3|*)
+      ;;
+  esac
 }
 
 # ================= Main Loop =================
