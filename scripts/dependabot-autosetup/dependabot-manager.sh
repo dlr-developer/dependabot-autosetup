@@ -109,6 +109,7 @@ menu_configure_folders() {
           SCAN_DIRS+=("$CHECK_DIR")
           save_config
           echo -e "${C_ON}Added $CHECK_DIR${C_RESET}"
+          break
         else
           echo -e "${C_DANGER}Directory does not exist! Checked: $CHECK_DIR${C_RESET}"
         fi
