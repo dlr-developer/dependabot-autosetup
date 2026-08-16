@@ -157,6 +157,7 @@ menu_bulk_setup() {
     return
   fi
 
+  local filter_mode="all"
   while true; do
     echo ""
     echo -e "${C_OFF}────────────────────────────────────────${C_RESET}"
@@ -164,61 +165,67 @@ menu_bulk_setup() {
     echo -e "${C_OFF}Select directories to install/update dependabot-autosetup:${C_RESET}"
     echo ""
     
-    local choices=()
-    for i in "${!repos[@]}"; do
-      local version
-      version=$(get_local_version "${repos[$i]}")
+    local filtered_repos=()
+    for r in "${repos[@]}"; do
+      local has_git=false
+      [ -d "$r/.git" ] && has_git=true
       
-      # Check if git is initialized
-      local git_status=""
-      if [ ! -d "${repos[$i]}/.git" ]; then
-        git_status="${C_DANGER}[NO GIT INITIALIZED]${C_RESET} "
+      if [ "$filter_mode" = "all" ]; then
+        filtered_repos+=("$r")
+      elif [ "$filter_mode" = "git" ] && [ "$has_git" = "true" ]; then
+        filtered_repos+=("$r")
+      elif [ "$filter_mode" = "nogit" ] && [ "$has_git" = "false" ]; then
+        filtered_repos+=("$r")
       fi
-      
-      local status_str=""
-      if [ "$version" = "none" ]; then
-        status_str="${C_OFF}(Not installed)${C_RESET}"
-      elif [ "$version" = "$VERSION" ]; then
-        status_str="${C_ON}(v$version - Up to date)${C_RESET}"
-      else
-        status_str="${C_WARN}(v$version - Update Available)${C_RESET}"
-      fi
-      
-      echo -e "  $((i+1)) [ ] ${git_status}$(basename "${repos[$i]}") - ${repos[$i]} $status_str"
     done
+
+    if [ ${#filtered_repos[@]} -eq 0 ]; then
+      echo -e "${C_OFF}  (No directories matching filter)${C_RESET}"
+    else
+      for i in "${!filtered_repos[@]}"; do
+        local rpath="${filtered_repos[$i]}"
+        local version
+        version=$(get_local_version "$rpath")
+        
+        local git_status=""
+        if [ ! -d "$rpath/.git" ]; then
+          git_status="${C_DANGER}[NO GIT INITIALIZED]${C_RESET} "
+        fi
+        
+        local status_str=""
+        if [ "$version" = "none" ]; then
+          status_str="${C_OFF}(Not installed)${C_RESET}"
+        elif [ "$version" = "$VERSION" ]; then
+          status_str="${C_ON}(v$version - Up to date)${C_RESET}"
+        else
+          status_str="${C_WARN}(v$version - Update Available)${C_RESET}"
+        fi
+        
+        echo -e "  $((i+1)) [ ] ${git_status}$(basename "$rpath") - $rpath $status_str"
+      done
+    fi
     echo ""
-    echo -e "  ${C_HEADER}u)${C_RESET} Update All Outdated/Not-installed"
-    echo -e "  ${C_HEADER}b)${C_RESET} Back to Main Menu"
+    echo -e "  ${C_HEADER}1)${C_RESET} Show Git Folders Only"
+    echo -e "  ${C_HEADER}2)${C_RESET} Show Non-Git Folders Only"
+    echo -e "  ${C_HEADER}3)${C_RESET} Install / Update Selected"
+    echo -e "  ${C_HEADER}4)${C_RESET} Update All Outdated / Not Installed"
+    echo -e "  ${C_HEADER}5)${C_RESET} Back to Main Menu"
     echo ""
-    read -p "$(echo -e "${C_PROMPT}Enter numbers (separated by space) or choice: ${C_RESET}")" BULK_CHOICE
+    read -p "$(echo -e "${C_PROMPT}Choose an action: ${C_RESET}")" BULK_CHOICE
     
     case "$BULK_CHOICE" in
-      b|B)
-        break
+      1)
+        filter_mode="git"
         ;;
-      u|U)
-        for repo_path in "${repos[@]}"; do
-          local version
-          version=$(get_local_version "$repo_path")
-          if [ "$version" != "$VERSION" ]; then
-            # Auto init git if missing
-            if [ ! -d "$repo_path/.git" ]; then
-              echo -e "${C_WARN}Initializing git repository inside $repo_path ...${C_RESET}"
-              git -C "$repo_path" init -q -b main 2>/dev/null || git -C "$repo_path" init -q
-            fi
-            echo -e "${C_OFF}Installing/updating in $repo_path ...${C_RESET}"
-            mkdir -p "$repo_path/scripts/dependabot-autosetup"
-            cp -r "${SELF_DIR}"/* "$repo_path/scripts/dependabot-autosetup/"
-            echo -e "${C_ON}Installed inside $(basename "$repo_path")${C_RESET}"
-          fi
-        done
-        break
+      2)
+        filter_mode="nogit"
         ;;
-      *)
-        # Split inputs by space to handle multiple checks
-        for selected in $BULK_CHOICE; do
-          if [[ "$selected" =~ ^[0-9]+$ ]] && [ "$selected" -ge 1 ] && [ "$selected" -le ${#repos[@]} ]; then
-            local target_repo="${repos[selected-1]}"
+      3)
+        echo ""
+        read -p "$(echo -e "${C_PROMPT}Enter list numbers to install (separated by space, e.g. 1 3): ${C_RESET}")" RUN_LIST
+        for selected in $RUN_LIST; do
+          if [[ "$selected" =~ ^[0-9]+$ ]] && [ "$selected" -ge 1 ] && [ "$selected" -le ${#filtered_repos[@]} ]; then
+            local target_repo="${filtered_repos[selected-1]}"
             # Auto init git if missing
             if [ ! -d "$target_repo/.git" ]; then
               echo -e "${C_WARN}Initializing git repository inside $target_repo ...${C_RESET}"
@@ -232,6 +239,27 @@ menu_bulk_setup() {
             echo -e "${C_DANGER}Invalid selection: $selected${C_RESET}"
           fi
         done
+        # Reset filter mode to show all after execution
+        filter_mode="all"
+        ;;
+      4)
+        for repo_path in "${repos[@]}"; do
+          local version
+          version=$(get_local_version "$repo_path")
+          if [ "$version" != "$VERSION" ]; then
+            if [ ! -d "$repo_path/.git" ]; then
+              echo -e "${C_WARN}Initializing git repository inside $repo_path ...${C_RESET}"
+              git -C "$repo_path" init -q -b main 2>/dev/null || git -C "$repo_path" init -q
+            fi
+            echo -e "${C_OFF}Installing/updating in $repo_path ...${C_RESET}"
+            mkdir -p "$repo_path/scripts/dependabot-autosetup"
+            cp -r "${SELF_DIR}"/* "$repo_path/scripts/dependabot-autosetup/"
+            echo -e "${C_ON}Installed inside $(basename "$repo_path")${C_RESET}"
+          fi
+        done
+        filter_mode="all"
+        ;;
+      5|*)
         break
         ;;
     esac
