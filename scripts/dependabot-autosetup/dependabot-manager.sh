@@ -306,7 +306,9 @@ menu_unified_dashboard() {
   echo ""
   echo -e "  ${C_HEADER}1)${C_RESET} Select specific PR to merge"
   echo -e "  ${C_HEADER}2)${C_RESET} Bulk merge ALL Low-Risk PRs"
-  echo -e "  ${C_HEADER}3)${C_RESET} Back to Main Menu"
+  echo -e "  ${C_HEADER}3)${C_RESET} Bulk merge ALL High-Risk PRs"
+  echo -e "  ${C_HEADER}4)${C_RESET} Filter PRs by Specific Repository"
+  echo -e "  ${C_HEADER}5)${C_RESET} Back to Main Menu"
   echo ""
   read -p "$(echo -e "${C_PROMPT}Choose an action: ${C_RESET}")" DB_OPT
   case "$DB_OPT" in
@@ -350,7 +352,92 @@ menu_unified_dashboard() {
         fi
       done
       ;;
-    3|*)
+    3)
+      echo ""
+      echo -e "${C_WARN}⚠️ WARNING: You are about to bulk merge MAJOR or unrecognized version updates.${C_RESET}"
+      read -p "$(echo -e "${C_PROMPT}Are you absolutely sure you want to bulk merge ALL High-Risk updates? [y/N]: ${C_RESET}")" HIGH_BULK_CONF
+      case "$HIGH_BULK_CONF" in
+        y|Y)
+          echo -e "${C_ON}Bulk merging all High-Risk PRs...${C_RESET}"
+          for item in "${dashboard_prs[@]}"; do
+            IFS='|' read -r pr_id pr_repo pr_num pr_title pr_risk <<< "$item"
+            if [ "$pr_risk" = "true" ]; then
+              echo -e "${C_OFF}Navigating to $pr_repo ...${C_RESET}"
+              cd "$pr_repo"
+              echo -e "${C_OFF}Merging High-Risk PR #${pr_num} (${pr_title})...${C_RESET}"
+              gh pr merge "$pr_num" --merge --delete-branch
+              cd "$SELF_DIR"
+            fi
+          done
+          ;;
+      esac
+      ;;
+    4)
+      echo ""
+      echo -e "${C_HEADER}Available Repositories with open PRs:${C_RESET}"
+      local unique_repos=()
+      for item in "${dashboard_prs[@]}"; do
+        IFS='|' read -r pr_id pr_repo pr_num pr_title pr_risk <<< "$item"
+        local rname
+        rname=$(basename "$pr_repo")
+        if [[ ! " ${unique_repos[*]} " =~ " ${rname} " ]]; then
+          unique_repos+=("$rname")
+        fi
+      done
+
+      for i in "${!unique_repos[@]}"; do
+        echo -e "  $((i+1)) ${unique_repos[$i]}"
+      done
+      echo ""
+      read -p "$(echo -e "${C_PROMPT}Select repository number to filter by: ${C_RESET}")" REPO_FILT_CHOICE
+      if [[ "$REPO_FILT_CHOICE" =~ ^[0-9]+$ ]] && [ "$REPO_FILT_CHOICE" -ge 1 ] && [ "$REPO_FILT_CHOICE" -le ${#unique_repos[@]} ]; then
+        local chosen_rname="${unique_repos[REPO_FILT_CHOICE-1]}"
+        echo ""
+        echo -e "${C_OFF}────────────────────────────────────────${C_RESET}"
+        echo -e "${C_HEADER}=== Open PRs for $chosen_rname ===${C_RESET}"
+        echo ""
+        printf "  ${C_LABEL}%-4s  %-6s  %-10s  %s${C_RESET}\n" "ID" "PR" "RISK" "UPDATE DESCRIPTION"
+        echo -e "  ${C_OFF}───  ──────  ──────────  ──────────────────────────────────${C_RESET}"
+        
+        local filtered_prs=()
+        for item in "${dashboard_prs[@]}"; do
+          IFS='|' read -r pr_id pr_repo pr_num pr_title pr_risk <<< "$item"
+          local curr_rname
+          curr_rname=$(basename "$pr_repo")
+          if [ "$curr_rname" = "$chosen_rname" ]; then
+            local r_str="${C_ON}Low-Risk${C_RESET}"
+            [ "$pr_risk" = "true" ] && r_str="${C_DANGER}High-Risk${C_RESET}"
+            
+            local f_line
+            f_line=$(printf "  %-3d  #%-5s %-23s  %s" "$pr_id" "$pr_num" "$r_str" "$pr_title")
+            echo -e "$f_line"
+            filtered_prs+=("$item")
+          fi
+        done
+
+        echo ""
+        echo -e "  ${C_HEADER}1)${C_RESET} Select specific PR to merge"
+        echo -e "  ${C_HEADER}2)${C_RESET} Back to Main Menu"
+        echo ""
+        read -p "$(echo -e "${C_PROMPT}Choose an action: ${C_RESET}")" FILT_OPT
+        if [ "$FILT_OPT" = "1" ]; then
+          echo ""
+          read -p "$(echo -e "${C_PROMPT}Enter the ID number from the table to merge: ${C_RESET}")" FILT_MERGE_ID
+          for item in "${filtered_prs[@]}"; do
+            IFS='|' read -r pr_id pr_repo pr_num pr_title pr_risk <<< "$item"
+            if [ "$pr_id" = "$FILT_MERGE_ID" ]; then
+              echo -e "${C_OFF}Navigating to $pr_repo ...${C_RESET}"
+              cd "$pr_repo"
+              echo -e "${C_OFF}Running merge verification for PR #${pr_num} ...${C_RESET}"
+              gh pr merge "$pr_num" --merge --delete-branch
+              cd "$SELF_DIR"
+              break
+            fi
+          done
+        fi
+      fi
+      ;;
+    5|*)
       ;;
   esac
 }
