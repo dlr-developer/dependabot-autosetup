@@ -110,7 +110,7 @@ Requires [Git for Windows](https://git-scm.com/download/win) (the `.bat` launche
 | ✅ **Verifies** | Checks the target GitHub repo actually exists before pushing, offers to create it if not |
 | 🔒 **Manages** | Toggle Dependabot security alert emails and repo visibility (public/private) via sub-menu |
 | 🔁 **Re-runnable** | Check status and change settings any time -- won't duplicate work already done |
-| ⚡ **Updates** | Run Dependabot check checks manually and pull latest merged updates in one step |
+| ⚡ **Updates** | Lists open Dependabot PRs, evaluates their risk levels (low/high), lets you merge them interactively, and pulls updates locally in one step |
 | 🧬 **Self-updating** | Looks up new Dependabot ecosystems automatically as GitHub adds support for them |
 
 ---
@@ -126,7 +126,7 @@ Requires [Git for Windows](https://git-scm.com/download/win) (the `.bat` launche
 5. It explains **low-risk** (patch/minor) and **high-risk** (major) auto-merge separately, with a recommendation for each, and asks whether to turn them on.
 6. It shows current Dependabot security alert status for the repo and lets you turn it on/off.
 7. It asks to push -- creates a branch, commits, and opens/merges a PR for you (recommended, since it's just config files).
-8. You land on a status menu: re-run setup, push changes, configure features (auto-merge risk levels, alerts, repo visibility), run Dependabot check & pull updates, uninstall, or exit.
+8. You land on a status menu: re-run setup, push changes, configure features (auto-merge risk levels, alerts, repo visibility), check PRs & pull updates (with interactive risk-assessed merging), uninstall, or exit.
 
 **Every run after that:** it shows you the current status first, then the same menu -- nothing gets duplicated, and you can change any setting at any time by re-running the script.
 
