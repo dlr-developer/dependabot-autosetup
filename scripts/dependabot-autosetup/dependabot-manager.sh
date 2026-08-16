@@ -73,6 +73,7 @@ scan_repositories() {
 menu_configure_folders() {
   while true; do
     echo ""
+    echo -e "${C_OFF}────────────────────────────────────────${C_RESET}"
     echo -e "${C_HEADER}=== Configure Scan Directories ===${C_RESET}"
     echo -e "${C_LABEL}Instructions:${C_RESET}"
     echo "  Enter the parent folders where your project directories are kept (e.g. C:\Projects)."
@@ -153,6 +154,7 @@ menu_bulk_setup() {
 
   while true; do
     echo ""
+    echo -e "${C_OFF}────────────────────────────────────────${C_RESET}"
     echo -e "${C_HEADER}=== Multi-Repo Installer ===${C_RESET}"
     echo -e "${C_OFF}Select directories to install/update dependabot-autosetup:${C_RESET}"
     echo ""
@@ -324,12 +326,15 @@ menu_unified_dashboard() {
 # ================= Main Loop =================
 while true; do
   if [ ${#SCAN_DIRS[@]} -eq 0 ]; then
+    echo ""
+    echo -e "${C_OFF}────────────────────────────────────────${C_RESET}"
     echo -e "${C_WARN}⚠️ No scan directories configured yet. Redirecting to configuration menu...${C_RESET}"
     menu_configure_folders
     continue
   fi
 
   echo ""
+  echo -e "${C_OFF}────────────────────────────────────────${C_RESET}"
   echo -e "${C_HEADER}=== dependabot-autosetup Central Manager (v${VERSION}) ===${C_RESET}"
   echo -e "  ${C_HEADER}1)${C_RESET} View Unified PR Dashboard"
   echo -e "  ${C_HEADER}2)${C_RESET} Run Multi-Repo Bulk Setup / Installer"
@@ -339,6 +344,8 @@ while true; do
   read -p "$(echo -e "${C_PROMPT}Choose an action: ${C_RESET}")" OPT
   case "$OPT" in
     1)
+      echo ""
+      echo -e "${C_OFF}────────────────────────────────────────${C_RESET}"
       menu_unified_dashboard
       ;;
     2)
