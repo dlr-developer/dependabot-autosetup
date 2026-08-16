@@ -851,27 +851,32 @@ while true; do
         echo ""
         echo -e "${C_LABEL}Checking open Dependabot PRs...${C_RESET}"
         # Fetch PR numbers and titles
-        PR_RAW_DATA=$(gh pr list --repo "$REPO_TARGET" --author "app/dependabot" --json number,title --jq '.[] | "\(.number):\(.title)"' 2>/dev/null)
-        if [ -n "$PR_RAW_DATA" ]; then
+        # Using a temporary file to read raw data cleanly into an array, keeping stdin completely free of piping
+        local TEMP_PR_FILE
+        TEMP_PR_FILE=$(mktemp)
+        gh pr list --repo "$REPO_TARGET" --author "app/dependabot" --json number,title --jq '.[] | "\(.number):\(.title)"' > "$TEMP_PR_FILE" 2>/dev/null
+        
+        PR_LINES=()
+        if [ -f "$TEMP_PR_FILE" ]; then
+          while IFS= read -r line; do
+            [ -n "$line" ] && PR_LINES+=("$line")
+          done < "$TEMP_PR_FILE"
+          rm -f "$TEMP_PR_FILE"
+        fi
+
+        if [ ${#PR_LINES[@]} -gt 0 ]; then
           echo -e "${C_ON}Open Dependabot PRs:${C_RESET}"
-          # Display all PRs first
-          echo "$PR_RAW_DATA" | while IFS= read -r pr_line; do
+          for pr_line in "${PR_LINES[@]}"; do
             pr_num="${pr_line%%:*}"
             pr_title="${pr_line#*:}"
             echo -e "  #${pr_num} ${pr_title}"
           done
           echo ""
 
-          read -p "$(echo -e "${C_PROMPT}Would you like to merge any of these PRs now? [y/N]: ${C_RESET}")" MERGE_PRS_ANS
+          read -p "$(echo -e "${C_PROMPT}Would you like to update any of these now? [y/n]: ${C_RESET}")" MERGE_PRS_ANS
           case "$MERGE_PRS_ANS" in
             y|Y)
-              # Read raw PR data into a bash array first.
-              # Piping data to a while-read loop redirects stdin to the pipe, which causes
-              # subsequent 'read -p' prompts inside the loop to fail or be skipped instantly.
-              # Storing lines in an array keeps stdin connected to the TTY.
-              IFS=$'\n' read -rd '' -a PR_LINES <<< "$PR_RAW_DATA"
               for pr_line in "${PR_LINES[@]}"; do
-                [ -z "$pr_line" ] && continue
                 pr_num="${pr_line%%:*}"
                 pr_title="${pr_line#*:}"
                 
@@ -893,17 +898,16 @@ while true; do
                   echo -e "PR #${pr_num}: \"${pr_title}\""
                   echo "This is a MAJOR version change. It may contain breaking API changes"
                   echo "that require manual code edits to avoid build failures."
-                  echo -e "${C_WARN}Recommendation: Review changes carefully before merging.${C_RESET}"
+                  echo -e "${C_DANGER}Recommendation: n (Review changes carefully before merging.)${C_RESET}"
                 else
                   echo -e "${C_ON}✅ LOW-RISK UPDATE DETECTED${C_RESET}"
                   echo -e "PR #${pr_num}: \"${pr_title}\""
                   echo "This is a patch/minor version change. These are intended to be backward-compatible."
-                  echo -e "${C_ON}Recommendation: Generally safe to merge.${C_RESET}"
+                  echo -e "${C_ON}Recommendation: y (Generally safe to merge.)${C_RESET}"
                 fi
                 echo ""
 
-                # Ask the user (stdin works correctly now)
-                read -p "$(echo -e "${C_PROMPT}Merge PR #${pr_num} now? [y/N]: ${C_RESET}")" < /dev/tty SINGLE_PR_ANS
+                read -p "$(echo -e "${C_PROMPT}Would you like to update? [y/n]: ${C_RESET}")" SINGLE_PR_ANS
                 case "$SINGLE_PR_ANS" in
                   y|Y)
                     echo -e "${C_OFF}Merging PR #${pr_num}...${C_RESET}"
