@@ -288,11 +288,11 @@ menu_unified_dashboard() {
             
             # Format spacing and wrap description text cleanly under the DESCRIPTION column
             local first_prefix
-            first_prefix=$(printf "  %-3d  %-15s  #%-5s %-25s  " "$dashboard_counter" "$repo_name" "$pr_num" "$risk_str")
+            first_prefix=$(printf "  %-3d  %-15s  #%-5s %-12s  " "$dashboard_counter" "$repo_name" "$pr_num" "$risk_str")
             
-            # 55 characters prefix spacing width. Wrap description to fit terminal width
+            # 42 characters prefix spacing width. Wrap description to fit terminal width
             local term_width=80
-            local desc_width=$((term_width - 55))
+            local desc_width=$((term_width - 42))
             [ $desc_width -lt 30 ] && desc_width=30
             
             local wrapped_desc
@@ -304,7 +304,7 @@ menu_unified_dashboard() {
                 echo -e "${first_prefix}${line}"
               else
                 # Pad following wrapped lines so they line up perfectly under the first line
-                printf "                                                       %s\n" "$line"
+                printf "                                          %s\n" "$line"
               fi
               line_idx=$((line_idx+1))
             done <<< "$wrapped_desc"
