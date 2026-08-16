@@ -584,11 +584,19 @@ push_changes() {
           echo "The Dependabot files (.github/, scripts/dependabot-autosetup/) always get committed"
           echo "automatically -- no prompt needed for those. This is only about the files listed above."
           echo ""
-          echo -e "  ${C_HEADER}1)${C_RESET} Commit them to $DEFAULT_BRANCH now ${C_ON}(Recommended -- simplest, safest)${C_RESET}"
-          echo -e "  ${C_HEADER}2)${C_RESET} Commit them to a new separate branch ${C_OFF}(keeps $DEFAULT_BRANCH clean, review later)${C_RESET}"
-          echo -e "  ${C_HEADER}3)${C_RESET} Skip -- leave them uncommitted and continue ${C_DANGER}(risk: could be lost)${C_RESET}"
-          echo -e "  ${C_HEADER}4)${C_RESET} Cancel -- stop here, don't push anything"
-          read -p "$(echo -e "${C_PROMPT}> ${C_RESET}")" UNCOMMITTED_CHOICE
+          local UNCOMMITTED_CHOICE=""
+          while true; do
+            echo -e "  ${C_HEADER}1)${C_RESET} Commit them to $DEFAULT_BRANCH now ${C_ON}(Recommended -- simplest, safest)${C_RESET}"
+            echo -e "  ${C_HEADER}2)${C_RESET} Commit them to a new separate branch ${C_OFF}(keeps $DEFAULT_BRANCH clean, review later)${C_RESET}"
+            echo -e "  ${C_HEADER}3)${C_RESET} Skip -- leave them uncommitted and continue ${C_DANGER}(risk: could be lost)${C_RESET}"
+            echo -e "  ${C_HEADER}4)${C_RESET} Cancel -- stop here, don't push anything"
+            read -p "$(echo -e "${C_PROMPT}> ${C_RESET}")" UNCOMMITTED_CHOICE
+            case "$UNCOMMITTED_CHOICE" in
+              1|2|3|4) break ;;
+              *) echo -e "${C_DANGER}Invalid choice. Please enter 1, 2, 3, or 4.${C_RESET}" ;;
+            esac
+          done
+
           case "$UNCOMMITTED_CHOICE" in
             1)
               CURRENT_BRANCH_BEFORE=$(git branch --show-current)
@@ -609,12 +617,12 @@ push_changes() {
               git checkout "$DEFAULT_BRANCH" 2>/dev/null || git checkout -b "$DEFAULT_BRANCH" "origin/$DEFAULT_BRANCH" 2>/dev/null
               echo -e "${C_ON}Committed and pushed to $SIDE_BRANCH.${C_RESET} Continuing on $DEFAULT_BRANCH..."
               ;;
+            3)
+              echo -e "${C_WARN}Continuing without committing.${C_RESET}"
+              ;;
             4)
               echo -e "${C_OFF}Cancelled. Nothing pushed.${C_RESET}"
               return
-              ;;
-            *)
-              echo -e "${C_WARN}Continuing without committing.${C_RESET}"
               ;;
           esac
         fi
