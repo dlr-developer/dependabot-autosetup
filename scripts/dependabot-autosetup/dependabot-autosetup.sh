@@ -911,10 +911,35 @@ while true; do
                 case "$SINGLE_PR_ANS" in
                   y|Y)
                     echo -e "${C_OFF}Merging PR #${pr_num}...${C_RESET}"
-                    if gh pr merge "$pr_num" --merge --delete-branch; then
+                    if gh pr merge "$pr_num" --merge --delete-branch >/dev/null 2>&1; then
                       echo -e "${C_ON}Merged PR #${pr_num}.${C_RESET}"
                     else
-                      echo -e "${C_DANGER}Failed to merge PR #${pr_num}.${C_RESET}"
+                      # If direct merge fails (e.g. conflicts), try to checkout and rebase-resolve them
+                      echo -e "${C_WARN}Direct merge blocked by conflicts. Attempting local rebase resolution...${C_RESET}"
+                      local PREV_BRANCH
+                      PREV_BRANCH=$(git branch --show-current)
+                      if gh pr checkout "$pr_num" >/dev/null 2>&1; then
+                        git fetch origin "$CURR_BRANCH" >/dev/null 2>&1
+                        # Rebase using "theirs" strategy (preferring the newer version upgrades)
+                        if git rebase -Xtheirs "origin/$CURR_BRANCH" >/dev/null 2>&1; then
+                          if git push origin HEAD --force >/dev/null 2>&1; then
+                            # Try merging again after clean rebase
+                            if gh pr merge "$pr_num" --merge --delete-branch >/dev/null 2>&1; then
+                              echo -e "${C_ON}Merged PR #${pr_num} successfully after resolving conflicts.${C_RESET}"
+                            else
+                              echo -e "${C_DANGER}Failed to merge PR #${pr_num} even after rebase.${C_RESET}"
+                            fi
+                          else
+                            echo -e "${C_DANGER}Failed to push rebased branch for PR #${pr_num}.${C_RESET}"
+                          fi
+                        else
+                          git rebase --abort >/dev/null 2>&1
+                          echo -e "${C_DANGER}Conflicts could not be auto-resolved for PR #${pr_num}.${C_RESET}"
+                        fi
+                        git checkout "$PREV_BRANCH" >/dev/null 2>&1
+                      else
+                        echo -e "${C_DANGER}Failed to checkout PR #${pr_num} branch.${C_RESET}"
+                      fi
                     fi
                     ;;
                 esac
