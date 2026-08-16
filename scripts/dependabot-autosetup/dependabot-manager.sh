@@ -305,9 +305,9 @@ menu_unified_dashboard() {
 
   echo ""
   echo -e "  ${C_HEADER}1)${C_RESET} Select specific PR to merge"
-  echo -e "  ${C_HEADER}2)${C_RESET} Bulk merge ALL Low-Risk PRs"
-  echo -e "  ${C_HEADER}3)${C_RESET} Bulk merge ALL High-Risk PRs"
-  echo -e "  ${C_HEADER}4)${C_RESET} Filter PRs by Specific Repository"
+  echo -e "  ${C_HEADER}2)${C_RESET} Select specific Repository"
+  echo -e "  ${C_HEADER}3)${C_RESET} Bulk merge ALL Low-Risk PRs"
+  echo -e "  ${C_HEADER}4)${C_RESET} Bulk merge ALL High-Risk PRs"
   echo -e "  ${C_HEADER}5)${C_RESET} Back to Main Menu"
   echo ""
   read -p "$(echo -e "${C_PROMPT}Choose an action: ${C_RESET}")" DB_OPT
@@ -339,40 +339,6 @@ menu_unified_dashboard() {
       fi
       ;;
     2)
-      echo ""
-      echo -e "${C_ON}Bulk merging all Low-Risk PRs...${C_RESET}"
-      for item in "${dashboard_prs[@]}"; do
-        IFS='|' read -r pr_id pr_repo pr_num pr_title pr_risk <<< "$item"
-        if [ "$pr_risk" = "false" ]; then
-          echo -e "${C_OFF}Navigating to $pr_repo ...${C_RESET}"
-          cd "$pr_repo"
-          echo -e "${C_OFF}Merging Low-Risk PR #${pr_num} (${pr_title})...${C_RESET}"
-          gh pr merge "$pr_num" --merge --delete-branch
-          cd "$SELF_DIR"
-        fi
-      done
-      ;;
-    3)
-      echo ""
-      echo -e "${C_WARN}⚠️ WARNING: You are about to bulk merge MAJOR or unrecognized version updates.${C_RESET}"
-      read -p "$(echo -e "${C_PROMPT}Are you absolutely sure you want to bulk merge ALL High-Risk updates? [y/N]: ${C_RESET}")" HIGH_BULK_CONF
-      case "$HIGH_BULK_CONF" in
-        y|Y)
-          echo -e "${C_ON}Bulk merging all High-Risk PRs...${C_RESET}"
-          for item in "${dashboard_prs[@]}"; do
-            IFS='|' read -r pr_id pr_repo pr_num pr_title pr_risk <<< "$item"
-            if [ "$pr_risk" = "true" ]; then
-              echo -e "${C_OFF}Navigating to $pr_repo ...${C_RESET}"
-              cd "$pr_repo"
-              echo -e "${C_OFF}Merging High-Risk PR #${pr_num} (${pr_title})...${C_RESET}"
-              gh pr merge "$pr_num" --merge --delete-branch
-              cd "$SELF_DIR"
-            fi
-          done
-          ;;
-      esac
-      ;;
-    4)
       echo ""
       echo -e "${C_HEADER}Available Repositories with open PRs:${C_RESET}"
       local unique_repos=()
@@ -437,9 +403,44 @@ menu_unified_dashboard() {
         fi
       fi
       ;;
+    3)
+      echo ""
+      echo -e "${C_ON}Bulk merging all Low-Risk PRs...${C_RESET}"
+      for item in "${dashboard_prs[@]}"; do
+        IFS='|' read -r pr_id pr_repo pr_num pr_title pr_risk <<< "$item"
+        if [ "$pr_risk" = "false" ]; then
+          echo -e "${C_OFF}Navigating to $pr_repo ...${C_RESET}"
+          cd "$pr_repo"
+          echo -e "${C_OFF}Merging Low-Risk PR #${pr_num} (${pr_title})...${C_RESET}"
+          gh pr merge "$pr_num" --merge --delete-branch
+          cd "$SELF_DIR"
+        fi
+      done
+      ;;
+    4)
+      echo ""
+      echo -e "${C_WARN}⚠️ WARNING: You are about to bulk merge MAJOR or unrecognized version updates.${C_RESET}"
+      read -p "$(echo -e "${C_PROMPT}Are you absolutely sure you want to bulk merge ALL High-Risk updates? [y/N]: ${C_RESET}")" HIGH_BULK_CONF
+      case "$HIGH_BULK_CONF" in
+        y|Y)
+          echo -e "${C_ON}Bulk merging all High-Risk PRs...${C_RESET}"
+          for item in "${dashboard_prs[@]}"; do
+            IFS='|' read -r pr_id pr_repo pr_num pr_title pr_risk <<< "$item"
+            if [ "$pr_risk" = "true" ]; then
+              echo -e "${C_OFF}Navigating to $pr_repo ...${C_RESET}"
+              cd "$pr_repo"
+              echo -e "${C_OFF}Merging High-Risk PR #${pr_num} (${pr_title})...${C_RESET}"
+              gh pr merge "$pr_num" --merge --delete-branch
+              cd "$SELF_DIR"
+            fi
+          done
+          ;;
+      esac
+      ;;
     5|*)
       ;;
   esac
+}
 }
 
 # ================= Main Loop =================
