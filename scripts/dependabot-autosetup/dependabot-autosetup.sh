@@ -921,68 +921,79 @@ while true; do
                 pr_num="${pr_line%%:*}"
                 pr_title="${pr_line#*:}"
                 
-                # Check update risk type based on PR title patterns (e.g. major version bump vs minor/patch)
-                # Matches patterns like: from X.Y.Z to A.B.C where X != A (Major change)
-                IS_HIGH_RISK=false
-                if echo "$pr_title" | grep -qP "from \d+\..* to \d+\."; then
-                  v_from=$(echo "$pr_title" | grep -oP "from \K\d+")
-                  v_to=$(echo "$pr_title" | grep -oP "to \K\d+")
-                  if [ -n "$v_from" ] && [ -n "$v_to" ] && [ "$v_from" -ne "$v_to" ]; then
-                    IS_HIGH_RISK=true
-                  fi
-                fi
+                 # Check update risk type based on PR title patterns (e.g. major version bump vs minor/patch)
+                 # Matches patterns like: from X.Y.Z to A.B.C where X != A (Major change)
+                 # Defaults to true (high risk) if the version pattern is unparseable for safety.
+                 IS_HIGH_RISK=true
+                 if echo "$pr_title" | grep -qP "from \d+\..* to \d+\."; then
+                   v_from=$(echo "$pr_title" | grep -oP "from \K\d+")
+                   v_to=$(echo "$pr_title" | grep -oP "to \K\d+")
+                   if [ -n "$v_from" ] && [ -n "$v_to" ]; then
+                     if [ "$v_from" -eq "$v_to" ]; then
+                       IS_HIGH_RISK=false
+                     fi
+                   fi
+                 fi
 
-                echo ""
-                echo -e "${C_OFF}────────────────────────────────────────${C_RESET}"
-                if [ "$IS_HIGH_RISK" == "true" ]; then
-                  echo -e "${C_DANGER}⚠️ HIGH-RISK UPDATE DETECTED${C_RESET}"
-                  echo -e "PR #${pr_num}: \"${pr_title}\""
-                  echo "This is a MAJOR version change. It may contain breaking API changes"
-                  echo "that require manual code edits to avoid build failures."
-                  echo -e "${C_DANGER}Recommendation: n (Review changes carefully before merging.)${C_RESET}"
-                else
-                  echo -e "${C_ON}✅ LOW-RISK UPDATE DETECTED${C_RESET}"
-                  echo -e "PR #${pr_num}: \"${pr_title}\""
-                  echo "This is a patch/minor version change. These are intended to be backward-compatible."
-                  echo -e "${C_ON}Recommendation: y (Generally safe to merge.)${C_RESET}"
-                fi
-                echo ""
+                 echo ""
+                 echo -e "${C_OFF}────────────────────────────────────────${C_RESET}"
+                 if [ "$IS_HIGH_RISK" == "true" ]; then
+                   echo -e "${C_DANGER}⚠️ HIGH-RISK UPDATE DETECTED${C_RESET}"
+                   echo -e "PR #${pr_num}: \"${pr_title}\""
+                   echo "This is a MAJOR or unrecognized version change. It may contain breaking API changes"
+                   echo "or custom format changes that require manual review."
+                   echo -e "${C_DANGER}Recommendation: n (Review changes carefully before merging.)${C_RESET}"
+                 else
+                   echo -e "${C_ON}✅ LOW-RISK UPDATE DETECTED${C_RESET}"
+                   echo -e "PR #${pr_num}: \"${pr_title}\""
+                   echo "This is a patch/minor version change. These are intended to be backward-compatible."
+                   echo -e "${C_ON}Recommendation: y (Generally safe to merge.)${C_RESET}"
+                 fi
+                 echo ""
 
-                read -p "$(echo -e "${C_PROMPT}Would you like to update? [y/n]: ${C_RESET}")" SINGLE_PR_ANS
-                case "$SINGLE_PR_ANS" in
-                  y|Y)
-                    echo -e "${C_OFF}Merging PR #${pr_num}...${C_RESET}"
-                    if gh pr merge "$pr_num" --merge --delete-branch >/dev/null 2>&1; then
-                      echo -e "${C_ON}Merged PR #${pr_num}.${C_RESET}"
-                    else
-                      # If direct merge fails (e.g. conflicts), try to checkout and rebase-resolve them
-                      echo -e "${C_WARN}Direct merge blocked by conflicts. Attempting local rebase resolution...${C_RESET}"
-                      PREV_BRANCH=$(git branch --show-current)
-                      if gh pr checkout "$pr_num" >/dev/null 2>&1; then
-                        git fetch origin "$CURR_BRANCH" >/dev/null 2>&1
-                        # Rebase using "theirs" strategy (preferring the newer version upgrades)
-                        if git rebase -Xtheirs "origin/$CURR_BRANCH" >/dev/null 2>&1; then
-                          if git push origin HEAD --force >/dev/null 2>&1; then
-                            # Try merging again after clean rebase
-                            if gh pr merge "$pr_num" --merge --delete-branch >/dev/null 2>&1; then
-                              echo -e "${C_ON}Merged PR #${pr_num} successfully after resolving conflicts.${C_RESET}"
-                            else
-                              echo -e "${C_DANGER}Failed to merge PR #${pr_num} even after rebase.${C_RESET}"
-                            fi
-                          else
-                            echo -e "${C_DANGER}Failed to push rebased branch for PR #${pr_num}.${C_RESET}"
-                          fi
-                        else
-                          git rebase --abort >/dev/null 2>&1
-                          echo -e "${C_DANGER}Conflicts could not be auto-resolved for PR #${pr_num}.${C_RESET}"
-                        fi
-                        git checkout "$PREV_BRANCH" >/dev/null 2>&1
-                      else
-                        echo -e "${C_DANGER}Failed to checkout PR #${pr_num} branch.${C_RESET}"
-                      fi
-                    fi
-                    ;;
-                esac
+                 read -p "$(echo -e "${C_PROMPT}Would you like to update? [y/n]: ${C_RESET}")" SINGLE_PR_ANS
+                 case "$SINGLE_PR_ANS" in
+                   y|Y)
+                     echo -e "${C_OFF}Merging PR #${pr_num}...${C_RESET}"
+                     if gh pr merge "$pr_num" --merge --delete-branch >/dev/null 2>&1; then
+                       echo -e "${C_ON}Merged PR #${pr_num}.${C_RESET}"
+                     else
+                       echo -e "${C_WARN}Direct merge blocked by conflicts.${C_RESET}"
+                       read -p "$(echo -e "${C_PROMPT}Auto-resolve conflict by checking out and force-pushing a rebased branch? [y/N]: ${C_RESET}")" RESOLVE_CONF
+                       case "$RESOLVE_CONF" in
+                         y|Y)
+                           echo -e "${C_OFF}Attempting local rebase resolution...${C_RESET}"
+                           PREV_BRANCH=$(git branch --show-current)
+                           if gh pr checkout "$pr_num" >/dev/null 2>&1; then
+                             git fetch origin "$CURR_BRANCH" >/dev/null 2>&1
+                             # Rebase using "theirs" strategy (preferring the newer version upgrades)
+                             if git rebase -Xtheirs "origin/$CURR_BRANCH" >/dev/null 2>&1; then
+                               if git push origin HEAD --force >/dev/null 2>&1; then
+                                 # Try merging again after clean rebase
+                                 if gh pr merge "$pr_num" --merge --delete-branch >/dev/null 2>&1; then
+                                   echo -e "${C_ON}Merged PR #${pr_num} successfully after resolving conflicts.${C_RESET}"
+                                 else
+                                   echo -e "${C_DANGER}Failed to merge PR #${pr_num} even after rebase.${C_RESET}"
+                                 fi
+                               else
+                                 echo -e "${C_DANGER}Failed to push rebased branch for PR #${pr_num}.${C_RESET}"
+                               fi
+                             else
+                               git rebase --abort >/dev/null 2>&1
+                               echo -e "${C_DANGER}Conflicts could not be auto-resolved for PR #${pr_num}.${C_RESET}"
+                             fi
+                             git checkout "$PREV_BRANCH" >/dev/null 2>&1
+                           else
+                             echo -e "${C_DANGER}Failed to checkout PR #${pr_num} branch.${C_RESET}"
+                           fi
+                           ;;
+                         *)
+                           echo -e "${C_DANGER}Skipped conflict resolution for PR #${pr_num}.${C_RESET}"
+                           ;;
+                       esac
+                     fi
+                     ;;
+                 esac
               done
               # Pull changes locally if any PRs were merged
               echo -e "${C_LABEL}Pulling latest merged updates to local branch...${C_RESET}"
