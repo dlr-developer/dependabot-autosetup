@@ -836,7 +836,6 @@ while true; do
       refresh_status
       ;;
     4)
-      local CURR_BRANCH
       CURR_BRANCH=$(git branch --show-current)
       echo -e "${C_LABEL}Pulling latest updates from origin...${C_RESET}"
       git fetch origin
@@ -847,11 +846,22 @@ while true; do
       fi
 
       if [ "$HAVE_GH" != "true" ] || [ -z "$REPO_TARGET" ]; then
-        echo -e "${C_DANGER}No connected GitHub repo -- can't trigger manual update check.${C_RESET}"
+        echo -e "${C_DANGER}No connected GitHub repo -- can't trigger manual update check or view PRs.${C_RESET}"
       else
+        echo ""
+        echo -e "${C_LABEL}Checking open Dependabot PRs...${C_RESET}"
+        # Fetch PR list filtered by author = app/dependabot or matching the bot name
+        PR_LIST=$(gh pr list --repo "$REPO_TARGET" --author "app/dependabot" --json number,title,state,url --jq '.[] | "#\(.number) \(.title) (\(.url))"' 2>/dev/null)
+        if [ -n "$PR_LIST" ]; then
+          echo -e "${C_ON}Open Dependabot PRs:${C_RESET}"
+          echo -e "$PR_LIST"
+        else
+          echo -e "${C_OFF}No open Dependabot Pull Requests found on GitHub.${C_RESET}"
+        fi
+        echo ""
+
         echo -e "${C_LABEL}Triggering Dependabot update checks...${C_RESET}"
         if [ "$LOCAL_CONFIG" == "true" ]; then
-          local CONFIGURED_ECOS
           CONFIGURED_ECOS=$(grep "package-ecosystem:" .github/dependabot.yml | awk -F'"' '{print $2}')
           [ -z "$CONFIGURED_ECOS" ] && CONFIGURED_ECOS=$(grep "package-ecosystem:" .github/dependabot.yml | awk '{print $2}' | tr -d '"'\''')
           if [ -n "$CONFIGURED_ECOS" ]; then
