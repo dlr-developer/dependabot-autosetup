@@ -203,13 +203,13 @@ menu_bulk_setup() {
         
         echo -e "  $((i+1)) [ ] ${git_status}$(basename "$rpath") - $rpath $status_str"
       done
-    fi
     echo ""
     echo -e "  ${C_HEADER}1)${C_RESET} Show Git Folders Only"
     echo -e "  ${C_HEADER}2)${C_RESET} Show Non-Git Folders Only"
-    echo -e "  ${C_HEADER}3)${C_RESET} Install / Update Selected"
-    echo -e "  ${C_HEADER}4)${C_RESET} Update All Outdated / Not Installed"
-    echo -e "  ${C_HEADER}5)${C_RESET} Back to Main Menu"
+    echo -e "  ${C_HEADER}3)${C_RESET} Show All Folders"
+    echo -e "  ${C_HEADER}4)${C_RESET} Install / Update Selected"
+    echo -e "  ${C_HEADER}5)${C_RESET} Update All Outdated / Not Installed"
+    echo -e "  ${C_HEADER}6)${C_RESET} Back to Main Menu"
     echo ""
     read -p "$(echo -e "${C_PROMPT}Choose an action: ${C_RESET}")" BULK_CHOICE
     
@@ -221,6 +221,9 @@ menu_bulk_setup() {
         filter_mode="nogit"
         ;;
       3)
+        filter_mode="all"
+        ;;
+      4)
         echo ""
         read -p "$(echo -e "${C_PROMPT}Enter list numbers to install (separated by space, e.g. 1 3, or 'c' to cancel): ${C_RESET}")" RUN_LIST
         case "$RUN_LIST" in
@@ -249,7 +252,7 @@ menu_bulk_setup() {
         # Reset filter mode to show all after execution
         filter_mode="all"
         ;;
-      4)
+      5)
         for repo_path in "${repos[@]}"; do
           local version
           version=$(get_local_version "$repo_path")
@@ -266,7 +269,7 @@ menu_bulk_setup() {
         done
         filter_mode="all"
         ;;
-      5|*)
+      6|*)
         break
         ;;
     esac
