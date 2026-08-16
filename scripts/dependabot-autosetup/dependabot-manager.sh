@@ -286,9 +286,29 @@ menu_unified_dashboard() {
             local risk_str="${C_ON}Low-Risk${C_RESET}"
             [ "$is_high" = "true" ] && risk_str="${C_DANGER}High-Risk${C_RESET}"
             
-            local formatted_line
-            formatted_line=$(printf "  %-3d  %-15s  #%-5s %-23s  %s" "$dashboard_counter" "$repo_name" "$pr_num" "$risk_str" "$pr_title")
-            echo -e "$formatted_line"
+            # Format spacing and wrap description text cleanly under the DESCRIPTION column
+            local first_prefix
+            first_prefix=$(printf "  %-3d  %-15s  #%-5s %-23s  " "$dashboard_counter" "$repo_name" "$pr_num" "$risk_str")
+            
+            # 53 characters prefix spacing width. Wrap description to fit terminal width
+            local term_width=80
+            local desc_width=$((term_width - 53))
+            [ $desc_width -lt 30 ] && desc_width=30
+            
+            local wrapped_desc
+            wrapped_desc=$(echo "$pr_title" | fold -s -w "$desc_width")
+            
+            local line_idx=0
+            while IFS= read -r line; do
+              if [ $line_idx -eq 0 ]; then
+                echo -e "${first_prefix}${line}"
+              else
+                # Pad following wrapped lines so they line up perfectly under the first line
+                printf "                                                     %s\n" "$line"
+              fi
+              line_idx=$((line_idx+1))
+            done <<< "$wrapped_desc"
+            
             dashboard_prs+=("$dashboard_counter|$repo_path|$pr_num|$pr_title|$is_high")
             dashboard_counter=$((dashboard_counter+1))
           fi
@@ -374,9 +394,28 @@ menu_unified_dashboard() {
             local r_str="${C_ON}Low-Risk${C_RESET}"
             [ "$pr_risk" = "true" ] && r_str="${C_DANGER}High-Risk${C_RESET}"
             
-            local f_line
-            f_line=$(printf "  %-3d  #%-5s %-23s  %s" "$pr_id" "$pr_num" "$r_str" "$pr_title")
-            echo -e "$f_line"
+            # Format prefix and wrap description
+            local f_prefix
+            f_prefix=$(printf "  %-3d  #%-5s %-23s  " "$pr_id" "$pr_num" "$r_str")
+            
+            local term_width=80
+            local desc_width=$((term_width - 36)) # 36 character prefix width in filter view
+            [ $desc_width -lt 30 ] && desc_width=30
+            
+            local wrapped_desc
+            wrapped_desc=$(echo "$pr_title" | fold -s -w "$desc_width")
+            
+            local line_idx=0
+            while IFS= read -r line; do
+              if [ $line_idx -eq 0 ]; then
+                echo -e "${f_prefix}${line}"
+              else
+                # Pad following wrapped lines
+                printf "                                    %s\n" "$line"
+              fi
+              line_idx=$((line_idx+1))
+            done <<< "$wrapped_desc"
+            
             filtered_prs+=("$item")
           fi
         done
