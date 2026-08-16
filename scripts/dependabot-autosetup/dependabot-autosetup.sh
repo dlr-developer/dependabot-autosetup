@@ -777,9 +777,9 @@ while true; do
   echo -e "  ${C_HEADER}4)${C_RESET} Toggle high-risk auto-merge"
   echo -e "  ${C_HEADER}5)${C_RESET} Toggle security alert emails"
   echo -e "  ${C_HEADER}6)${C_RESET} Toggle repo visibility (public/private)"
-  echo -e "  ${C_HEADER}7)${C_RESET} Uninstall dependabot-autosetup"
-  echo -e "  ${C_HEADER}8)${C_RESET} Trigger manual Dependabot update check on GitHub"
-  echo -e "  ${C_HEADER}9)${C_RESET} Pull latest merged updates to local branch"
+  echo -e "  ${C_HEADER}7)${C_RESET} Trigger manual Dependabot update check on GitHub"
+  echo -e "  ${C_HEADER}8)${C_RESET} Pull latest merged updates to local branch"
+  echo -e "  ${C_HEADER}9)${C_RESET} Uninstall dependabot-autosetup"
   echo -e "  ${C_HEADER}10)${C_RESET} Exit"
   read -p "$(echo -e "${C_PROMPT}> ${C_RESET}")" CHOICE
 
@@ -816,8 +816,7 @@ while true; do
       fi
       refresh_status
       ;;
-    7) uninstall_dependabot; refresh_status ;;
-    8)
+    7)
       if [ "$HAVE_GH" != "true" ] || [ -z "$REPO_TARGET" ]; then
         echo -e "${C_DANGER}No connected GitHub repo -- can't trigger update check.${C_RESET}"
       else
@@ -848,7 +847,7 @@ while true; do
         fi
       fi
       ;;
-    9)
+    8)
       local CURR_BRANCH
       CURR_BRANCH=$(git branch --show-current)
       echo -e "${C_LABEL}Pulling latest updates from origin...${C_RESET}"
@@ -860,6 +859,7 @@ while true; do
       fi
       refresh_status
       ;;
+    9) uninstall_dependabot; refresh_status ;;
     10) echo -e "${C_ON}Done.${C_RESET}"; break ;;
     *) echo -e "${C_DANGER}Invalid choice.${C_RESET}" ;;
   esac
