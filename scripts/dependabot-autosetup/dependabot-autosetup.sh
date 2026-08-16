@@ -626,7 +626,7 @@ push_changes() {
             case "$MERGE_ANS" in
               y|Y)
                 CREATE_OUTPUT=$(gh pr create --fill --head add-dependabot --base "$DEFAULT_BRANCH" 2>&1)
-                if echo "$CREATE_OUTPUT" | grep -qi "no commits between"; then
+                if echo "$CREATE_OUTPUT" | grep -qi "commits between"; then
                   echo -e "${C_OFF}Already up to date with $DEFAULT_BRANCH -- nothing new to merge.${C_RESET}"
                 else
                   MERGE_OUTPUT=$(gh pr merge add-dependabot --merge --delete-branch 2>&1)
