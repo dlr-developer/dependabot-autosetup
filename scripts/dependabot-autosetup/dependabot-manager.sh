@@ -245,6 +245,10 @@ menu_unified_dashboard() {
   echo -e "${C_HEADER}=== Unified Dependabot PR Dashboard ===${C_RESET}"
   echo ""
   
+  # Render clean aligned table column headers
+  printf "  ${C_LABEL}%-4s  %-15s  %-6s  %-10s  %s${C_RESET}\n" "ID" "REPOSITORY" "PR" "RISK" "UPDATE DESCRIPTION"
+  echo -e "  ${C_OFF}───  ───────────────  ──────  ──────────  ──────────────────────────────────${C_RESET}"
+
   local dashboard_prs=()
   local dashboard_counter=1
 
@@ -283,7 +287,7 @@ menu_unified_dashboard() {
             [ "$is_high" = "true" ] && risk_str="${C_DANGER}High-Risk${C_RESET}"
             
             local formatted_line
-            formatted_line=$(printf "  %-3d  %-15s  #%-4s  %-23s  %s" "$dashboard_counter" "$repo_name" "$pr_num" "$risk_str" "$pr_title")
+            formatted_line=$(printf "  %-3d  %-15s  #%-5s %-23s  %s" "$dashboard_counter" "$repo_name" "$pr_num" "$risk_str" "$pr_title")
             echo -e "$formatted_line"
             dashboard_prs+=("$dashboard_counter|$repo_path|$pr_num|$pr_title|$is_high")
             dashboard_counter=$((dashboard_counter+1))
@@ -308,7 +312,7 @@ menu_unified_dashboard() {
   case "$DB_OPT" in
     1)
       echo ""
-      read -p "$(echo -e "${C_PROMPT}Enter the number of the PR to merge: ${C_RESET}")" DB_MERGE_CHOICE
+      read -p "$(echo -e "${C_PROMPT}Enter the ID number from the table to merge (e.g. 1-${dashboard_counter-1}): ${C_RESET}")" DB_MERGE_CHOICE
       if [[ "$DB_MERGE_CHOICE" =~ ^[0-9]+$ ]] && [ "$DB_MERGE_CHOICE" -ge 1 ] && [ "$DB_MERGE_CHOICE" -lt "$dashboard_counter" ]; then
         # Parse target PR
         local matching_pr=""
