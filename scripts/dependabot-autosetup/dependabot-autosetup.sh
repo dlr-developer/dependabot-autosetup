@@ -868,7 +868,35 @@ while true; do
               echo "$PR_RAW_DATA" | while IFS= read -r pr_line; do
                 pr_num="${pr_line%%:*}"
                 pr_title="${pr_line#*:}"
-                read -p "$(echo -e "${C_PROMPT}Merge PR #${pr_num} (\"${pr_title}\")? [y/N]: ${C_RESET}")" SINGLE_PR_ANS
+                
+                # Check update risk type based on PR title patterns (e.g. major version bump vs minor/patch)
+                # Matches patterns like: from X.Y.Z to A.B.C where X != A (Major change)
+                IS_HIGH_RISK=false
+                if echo "$pr_title" | grep -qP "from \d+\..* to \d+\."; then
+                  v_from=$(echo "$pr_title" | grep -oP "from \K\d+")
+                  v_to=$(echo "$pr_title" | grep -oP "to \K\d+")
+                  if [ -n "$v_from" ] && [ -n "$v_to" ] && [ "$v_from" -ne "$v_to" ]; then
+                    IS_HIGH_RISK=true
+                  fi
+                fi
+
+                echo ""
+                echo -e "${C_OFF}────────────────────────────────────────${C_RESET}"
+                if [ "$IS_HIGH_RISK" == "true" ]; then
+                  echo -e "${C_DANGER}⚠️ HIGH-RISK UPDATE DETECTED${C_RESET}"
+                  echo -e "PR #${pr_num}: \"${pr_title}\""
+                  echo "This is a MAJOR version change. It may contain breaking API changes"
+                  echo "that require manual code edits to avoid build failures."
+                  echo -e "${C_WARN}Recommendation: Review changes carefully before merging.${C_RESET}"
+                else
+                  echo -e "${C_ON}✅ LOW-RISK UPDATE DETECTED${C_RESET}"
+                  echo -e "PR #${pr_num}: \"${pr_title}\""
+                  echo "This is a patch/minor version change. These are intended to be backward-compatible."
+                  echo -e "${C_ON}Recommendation: Generally safe to merge.${C_RESET}"
+                fi
+                echo ""
+
+                read -p "$(echo -e "${C_PROMPT}Merge PR #${pr_num} now? [y/N]: ${C_RESET}")" SINGLE_PR_ANS
                 case "$SINGLE_PR_ANS" in
                   y|Y)
                     echo -e "${C_OFF}Merging PR #${pr_num}...${C_RESET}"
