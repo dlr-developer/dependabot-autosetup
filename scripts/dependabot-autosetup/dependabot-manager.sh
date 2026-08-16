@@ -222,23 +222,30 @@ menu_bulk_setup() {
         ;;
       3)
         echo ""
-        read -p "$(echo -e "${C_PROMPT}Enter list numbers to install (separated by space, e.g. 1 3): ${C_RESET}")" RUN_LIST
-        for selected in $RUN_LIST; do
-          if [[ "$selected" =~ ^[0-9]+$ ]] && [ "$selected" -ge 1 ] && [ "$selected" -le ${#filtered_repos[@]} ]; then
-            local target_repo="${filtered_repos[selected-1]}"
-            # Auto init git if missing
-            if [ ! -d "$target_repo/.git" ]; then
-              echo -e "${C_WARN}Initializing git repository inside $target_repo ...${C_RESET}"
-              git -C "$target_repo" init -q -b main 2>/dev/null || git -C "$target_repo" init -q
-            fi
-            echo -e "${C_OFF}Installing/updating in $target_repo ...${C_RESET}"
-            mkdir -p "$target_repo/scripts/dependabot-autosetup"
-            cp -r "${SELF_DIR}"/* "$target_repo/scripts/dependabot-autosetup/"
-            echo -e "${C_ON}Installed inside $(basename "$target_repo")${C_RESET}"
-          else
-            echo -e "${C_DANGER}Invalid selection: $selected${C_RESET}"
-          fi
-        done
+        read -p "$(echo -e "${C_PROMPT}Enter list numbers to install (separated by space, e.g. 1 3, or 'c' to cancel): ${C_RESET}")" RUN_LIST
+        case "$RUN_LIST" in
+          c|C|cancel|CANCEL|"")
+            echo -e "${C_OFF}Cancelled installer.${C_RESET}"
+            ;;
+          *)
+            for selected in $RUN_LIST; do
+              if [[ "$selected" =~ ^[0-9]+$ ]] && [ "$selected" -ge 1 ] && [ "$selected" -le ${#filtered_repos[@]} ]; then
+                local target_repo="${filtered_repos[selected-1]}"
+                # Auto init git if missing
+                if [ ! -d "$target_repo/.git" ]; then
+                  echo -e "${C_WARN}Initializing git repository inside $target_repo ...${C_RESET}"
+                  git -C "$target_repo" init -q -b main 2>/dev/null || git -C "$target_repo" init -q
+                fi
+                echo -e "${C_OFF}Installing/updating in $target_repo ...${C_RESET}"
+                mkdir -p "$target_repo/scripts/dependabot-autosetup"
+                cp -r "${SELF_DIR}"/* "$target_repo/scripts/dependabot-autosetup/"
+                echo -e "${C_ON}Installed inside $(basename "$target_repo")${C_RESET}"
+              else
+                echo -e "${C_DANGER}Invalid selection: $selected${C_RESET}"
+              fi
+            done
+            ;;
+        esac
         # Reset filter mode to show all after execution
         filter_mode="all"
         ;;
