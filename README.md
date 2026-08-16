@@ -21,6 +21,8 @@ Pick the command for whichever terminal you're already in -- `cd` into your proj
 
 ```bash
 cd your-project
+```
+```bash
 curl -fsSL https://raw.githubusercontent.com/dlr-developer/dependabot-autosetup/main/scripts/dependabot-autosetup/install-dependabot-autosetup.sh | bash
 ```
 
@@ -28,6 +30,8 @@ curl -fsSL https://raw.githubusercontent.com/dlr-developer/dependabot-autosetup/
 
 ```powershell
 cd your-project
+```
+```powershell
 $bash = "$env:ProgramFiles\Git\bin\bash.exe"; if (!(Test-Path $bash)) { $bash = "${env:ProgramFiles(x86)}\Git\bin\bash.exe" }; & $bash -c "curl -fsSL https://raw.githubusercontent.com/dlr-developer/dependabot-autosetup/main/scripts/dependabot-autosetup/install-dependabot-autosetup.sh | bash"
 ```
 
@@ -35,6 +39,8 @@ $bash = "$env:ProgramFiles\Git\bin\bash.exe"; if (!(Test-Path $bash)) { $bash = 
 
 ```cmd
 cd your-project
+```
+```cmd
 "%ProgramFiles%\Git\bin\bash.exe" -c "curl -fsSL https://raw.githubusercontent.com/dlr-developer/dependabot-autosetup/main/scripts/dependabot-autosetup/install-dependabot-autosetup.sh | bash"
 ```
 
