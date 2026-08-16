@@ -64,15 +64,18 @@ scan_repositories() {
         if [ -d "$subdir" ]; then
           local base
           base=$(basename "$subdir")
-          # Ignore hidden directories and common backup/archive naming styles
-          if [[ ! "$base" =~ ^\. ]] && [ "$base" != "Backups" ]; then
+          # Ignore hidden directories, the script's own parent repo, and Backups
+          if [[ ! "$base" =~ ^\. ]] && [ "$base" != "Backups" ] && [ "$base" != "dependabot-autosetup" ]; then
             found_repos+=("$subdir")
           fi
         fi
       done < <(find "$parent_dir" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort)
     fi
   done
-  echo "${found_repos[@]}"
+  # Output each path on its own line to preserve spaces safely
+  for r in "${found_repos[@]}"; do
+    echo "$r"
+  done
 }
 
 menu_configure_folders() {
@@ -150,10 +153,12 @@ menu_bulk_setup() {
 
   echo -e "${C_OFF}Scanning folders...${C_RESET}"
   local repos=()
-  read -r -a repos <<< "$(scan_repositories)"
+  while IFS= read -r line; do
+    [ -n "$line" ] && repos+=("$line")
+  done < <(scan_repositories)
   
   if [ ${#repos[@]} -eq 0 ]; then
-    echo -e "${C_DANGER}No git repositories found in configured scan paths.${C_RESET}"
+    echo -e "${C_DANGER}No repositories found in configured scan paths.${C_RESET}"
     return
   fi
 
@@ -214,6 +219,14 @@ menu_bulk_setup() {
     echo ""
     read -p "$(echo -e "${C_PROMPT}Choose an action: ${C_RESET}")" BULK_CHOICE
     
+    local files_to_copy=(
+      "dependabot-autosetup.sh"
+      "dependabot-autosetup.bat"
+      "README.md"
+      "unblock-screenshot-windows.png"
+      "install-dependabot-autosetup.sh"
+    )
+
     case "$BULK_CHOICE" in
       1)
         for repo_path in "${repos[@]}"; do
@@ -226,7 +239,9 @@ menu_bulk_setup() {
             fi
             echo -e "${C_OFF}Installing/updating in $repo_path ...${C_RESET}"
             mkdir -p "$repo_path/scripts/dependabot-autosetup"
-            cp -r "${SELF_DIR}"/* "$repo_path/scripts/dependabot-autosetup/"
+            for f in "${files_to_copy[@]}"; do
+              cp "${SELF_DIR}/$f" "$repo_path/scripts/dependabot-autosetup/" 2>/dev/null
+            done
             echo -e "${C_ON}Installed inside $(basename "$repo_path")${C_RESET}"
           fi
         done
@@ -250,7 +265,9 @@ menu_bulk_setup() {
                 fi
                 echo -e "${C_OFF}Installing/updating in $target_repo ...${C_RESET}"
                 mkdir -p "$target_repo/scripts/dependabot-autosetup"
-                cp -r "${SELF_DIR}"/* "$target_repo/scripts/dependabot-autosetup/"
+                for f in "${files_to_copy[@]}"; do
+                  cp "${SELF_DIR}/$f" "$target_repo/scripts/dependabot-autosetup/" 2>/dev/null
+                done
                 echo -e "${C_ON}Installed inside $(basename "$target_repo")${C_RESET}"
               else
                 echo -e "${C_DANGER}Invalid selection: $selected${C_RESET}"
@@ -285,7 +302,9 @@ menu_unified_dashboard() {
 
   echo -e "${C_OFF}Scanning repositories for open PRs...${C_RESET}"
   local repos=()
-  read -r -a repos <<< "$(scan_repositories)"
+  while IFS= read -r line; do
+    [ -n "$line" ] && repos+=("$line")
+  done < <(scan_repositories)
   
   local active_repos=()
   for r in "${repos[@]}"; do
