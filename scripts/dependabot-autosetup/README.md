@@ -40,7 +40,9 @@ cd your-project
 
 All three do the same thing -- PowerShell and cmd just hand the work to Git's own `bash.exe` directly instead of trying to understand `curl | bash` themselves, since that's bash syntax. All of them require [Git for Windows](https://git-scm.com/download/win) to be installed (Mac/Linux already have bash built in).
 
-This installs all five files -- `dependabot-autosetup.sh`, `dependabot-autosetup.bat`, `install-dependabot-autosetup.sh`, `README.md`, and `unblock-screenshot-windows.png` -- into `./scripts/dependabot-autosetup`, nested in its own folder so it never collides with other scripts already in your project's `scripts/` folder. Run it from the same terminal you used above:
+This installs all five files -- `dependabot-autosetup.sh`, `dependabot-autosetup.bat`, `install-dependabot-autosetup.sh`, `README.md`, and `unblock-screenshot-windows.png` -- into `./scripts/dependabot-autosetup`, nested in its own folder so it never collides with other scripts already in your project's `scripts/` folder.
+
+**It then launches the tool automatically** -- no second command needed. If you're in a non-interactive context where that's not possible (CI, automation, etc.), it skips straight to printing the manual command instead. To run it yourself later (or if auto-launch was skipped):
 
 **Git Bash / macOS / Linux:**
 
@@ -110,7 +112,7 @@ Requires [Git for Windows](https://git-scm.com/download/win) (the `.bat` launche
 
 **First run on a repo:**
 
-1. Run `./scripts/dependabot-autosetup/dependabot-autosetup.sh` (or double-click `dependabot-autosetup.bat`) from inside your project.
+1. If you installed via curl, it already launched automatically -- otherwise run `./scripts/dependabot-autosetup/dependabot-autosetup.sh` (or double-click `dependabot-autosetup.bat`) from inside your project.
 2. If GitHub CLI (`gh`) isn't installed or signed in, it'll offer to install it and walk you through sign-in -- your browser will open for a one-time code.
 3. It confirms which GitHub repo it's connected to (or asks you to enter one, and offers to create it -- public or private, your choice -- if it doesn't exist yet).
 4. It scans your project and lists the ecosystem(s) it found (npm, cargo, pip, etc.) and writes `.github/dependabot.yml`.
