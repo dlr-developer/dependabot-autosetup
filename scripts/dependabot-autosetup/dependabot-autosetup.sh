@@ -628,9 +628,9 @@ push_changes() {
           echo ""
           local UNCOMMITTED_CHOICE=""
           while true; do
-            echo -e "  ${C_HEADER}1)${C_RESET} Commit them to $DEFAULT_BRANCH now ${C_OFF}(simplest, commits all files)${C_RESET}"
-            echo -e "  ${C_HEADER}2)${C_RESET} Commit them to a new separate branch ${C_OFF}(keeps $DEFAULT_BRANCH clean, review later)${C_RESET}"
-            echo -e "  ${C_HEADER}3)${C_RESET} Skip -- push only Dependabot files ${C_ON}(Recommended -- keeps other changes uncommitted locally)${C_RESET}"
+            echo -e "  ${C_HEADER}1)${C_RESET} Skip -- push only Dependabot files ${C_ON}(Recommended -- keeps other changes uncommitted locally)${C_RESET}"
+            echo -e "  ${C_HEADER}2)${C_RESET} Commit them to $DEFAULT_BRANCH now ${C_OFF}(simplest, commits all files)${C_RESET}"
+            echo -e "  ${C_HEADER}3)${C_RESET} Commit them to a new separate branch ${C_OFF}(keeps $DEFAULT_BRANCH clean, review later)${C_RESET}"
             echo -e "  ${C_HEADER}4)${C_RESET} Cancel -- stop here, don't push anything"
             read -p "$(echo -e "${C_PROMPT}> ${C_RESET}")" UNCOMMITTED_CHOICE
             case "$UNCOMMITTED_CHOICE" in
@@ -641,6 +641,9 @@ push_changes() {
 
           case "$UNCOMMITTED_CHOICE" in
             1)
+              echo -e "${C_WARN}Continuing without committing.${C_RESET}"
+              ;;
+            2)
               CURRENT_BRANCH_BEFORE=$(git branch --show-current)
               if [ "$CURRENT_BRANCH_BEFORE" != "$DEFAULT_BRANCH" ]; then
                 git checkout "$DEFAULT_BRANCH" 2>/dev/null || git checkout -b "$DEFAULT_BRANCH" "origin/$DEFAULT_BRANCH" 2>/dev/null
@@ -650,7 +653,7 @@ push_changes() {
               git push -u origin "$DEFAULT_BRANCH" 2>/dev/null
               echo -e "${C_ON}Committed and pushed to $DEFAULT_BRANCH.${C_RESET} Continuing..."
               ;;
-            2)
+            3)
               SIDE_BRANCH="wip-$(date +%Y%m%d-%H%M%S)"
               git checkout -b "$SIDE_BRANCH"
               git add -A
@@ -658,9 +661,6 @@ push_changes() {
               git push -u origin "$SIDE_BRANCH" 2>/dev/null
               git checkout "$DEFAULT_BRANCH" 2>/dev/null || git checkout -b "$DEFAULT_BRANCH" "origin/$DEFAULT_BRANCH" 2>/dev/null
               echo -e "${C_ON}Committed and pushed to $SIDE_BRANCH.${C_RESET} Continuing on $DEFAULT_BRANCH..."
-              ;;
-            3)
-              echo -e "${C_WARN}Continuing without committing.${C_RESET}"
               ;;
             4)
               echo -e "${C_OFF}Cancelled. Nothing pushed.${C_RESET}"
