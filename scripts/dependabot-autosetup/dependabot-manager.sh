@@ -157,7 +157,7 @@ menu_bulk_setup() {
     return
   fi
 
-  local filter_mode="all"
+  local filter_mode="git"
   while true; do
     echo ""
     echo -e "${C_OFF}────────────────────────────────────────${C_RESET}"
@@ -205,26 +205,34 @@ menu_bulk_setup() {
       done
     fi
     echo ""
-    echo -e "  ${C_HEADER}1)${C_RESET} Show Git Folders Only"
-    echo -e "  ${C_HEADER}2)${C_RESET} Show Non-Git Folders Only"
+    echo -e "  ${C_HEADER}1)${C_RESET} Update All Outdated / Not Installed"
+    echo -e "  ${C_HEADER}2)${C_RESET} Install / Update Selected"
     echo -e "  ${C_HEADER}3)${C_RESET} Show All Folders"
-    echo -e "  ${C_HEADER}4)${C_RESET} Install / Update Selected"
-    echo -e "  ${C_HEADER}5)${C_RESET} Update All Outdated / Not Installed"
+    echo -e "  ${C_HEADER}4)${C_RESET} Show Git Folders Only"
+    echo -e "  ${C_HEADER}5)${C_RESET} Show Non-Git Folders Only"
     echo -e "  ${C_HEADER}6)${C_RESET} Back to Main Menu"
     echo ""
     read -p "$(echo -e "${C_PROMPT}Choose an action: ${C_RESET}")" BULK_CHOICE
     
     case "$BULK_CHOICE" in
       1)
+        for repo_path in "${repos[@]}"; do
+          local version
+          version=$(get_local_version "$repo_path")
+          if [ "$version" != "$VERSION" ]; then
+            if [ ! -d "$repo_path/.git" ]; then
+              echo -e "${C_WARN}Initializing git repository inside $repo_path ...${C_RESET}"
+              git -C "$repo_path" init -q -b main 2>/dev/null || git -C "$repo_path" init -q
+            fi
+            echo -e "${C_OFF}Installing/updating in $repo_path ...${C_RESET}"
+            mkdir -p "$repo_path/scripts/dependabot-autosetup"
+            cp -r "${SELF_DIR}"/* "$repo_path/scripts/dependabot-autosetup/"
+            echo -e "${C_ON}Installed inside $(basename "$repo_path")${C_RESET}"
+          fi
+        done
         filter_mode="git"
         ;;
       2)
-        filter_mode="nogit"
-        ;;
-      3)
-        filter_mode="all"
-        ;;
-      4)
         echo ""
         read -p "$(echo -e "${C_PROMPT}Enter list numbers to install (separated by space, e.g. 1 3, or 'c' to cancel): ${C_RESET}")" RUN_LIST
         case "$RUN_LIST" in
@@ -250,25 +258,17 @@ menu_bulk_setup() {
             done
             ;;
         esac
-        # Reset filter mode to show all after execution
+        # Reset filter mode to default git view after execution
+        filter_mode="git"
+        ;;
+      3)
         filter_mode="all"
         ;;
+      4)
+        filter_mode="git"
+        ;;
       5)
-        for repo_path in "${repos[@]}"; do
-          local version
-          version=$(get_local_version "$repo_path")
-          if [ "$version" != "$VERSION" ]; then
-            if [ ! -d "$repo_path/.git" ]; then
-              echo -e "${C_WARN}Initializing git repository inside $repo_path ...${C_RESET}"
-              git -C "$repo_path" init -q -b main 2>/dev/null || git -C "$repo_path" init -q
-            fi
-            echo -e "${C_OFF}Installing/updating in $repo_path ...${C_RESET}"
-            mkdir -p "$repo_path/scripts/dependabot-autosetup"
-            cp -r "${SELF_DIR}"/* "$repo_path/scripts/dependabot-autosetup/"
-            echo -e "${C_ON}Installed inside $(basename "$repo_path")${C_RESET}"
-          fi
-        done
-        filter_mode="all"
+        filter_mode="nogit"
         ;;
       6|*)
         break
