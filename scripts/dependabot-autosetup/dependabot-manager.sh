@@ -203,6 +203,7 @@ menu_bulk_setup() {
         
         echo -e "  $((i+1)) [ ] ${git_status}$(basename "$rpath") - $rpath $status_str"
       done
+    fi
     echo ""
     echo -e "  ${C_HEADER}1)${C_RESET} Show Git Folders Only"
     echo -e "  ${C_HEADER}2)${C_RESET} Show Non-Git Folders Only"
