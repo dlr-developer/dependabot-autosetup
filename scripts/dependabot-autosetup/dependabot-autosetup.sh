@@ -626,17 +626,25 @@ push_changes() {
             case "$MERGE_ANS" in
               y|Y)
                 CREATE_OUTPUT=$(gh pr create --fill --head add-dependabot --base "$DEFAULT_BRANCH" 2>&1)
-                if echo "$CREATE_OUTPUT" | grep -qi "commits between"; then
-                  echo -e "${C_OFF}Already up to date with $DEFAULT_BRANCH -- nothing new to merge.${C_RESET}"
+                if echo "$CREATE_OUTPUT" | grep -qi -E "commits between|no commits"; then
+                  echo -e "${C_ON}Already up to date with $DEFAULT_BRANCH -- nothing new to merge.${C_RESET}"
                 else
                   MERGE_OUTPUT=$(gh pr merge add-dependabot --merge --delete-branch 2>&1)
                   if [ $? -eq 0 ]; then
                     echo -e "${C_ON}Merged.${C_RESET}"
                   else
-                    echo -e "${C_DANGER}Couldn't auto-merge.${C_RESET}"
-                    [ -n "$CREATE_OUTPUT" ] && echo -e "${C_OFF}PR create said: $CREATE_OUTPUT${C_RESET}"
-                    echo -e "${C_OFF}Merge said: $MERGE_OUTPUT${C_RESET}"
-                    echo "Check the PR on GitHub: https://github.com/${REPO_TARGET}/pulls"
+                    # Sometimes the PR is successfully created but merge fails because checks are running
+                    # or there are no new commits if gh pr create succeeded but returned a warning.
+                    # If create succeeded, we can tell the user. If create failed, show the error.
+                    if echo "$CREATE_OUTPUT" | grep -q "github.com"; then
+                      echo -e "${C_ON}PR created successfully:${C_RESET} $(echo "$CREATE_OUTPUT" | grep "github.com")"
+                      echo -e "${C_WARN}Could not auto-merge yet.${C_RESET} You can merge it manually once checks pass."
+                    else
+                      echo -e "${C_DANGER}Couldn't auto-merge.${C_RESET}"
+                      [ -n "$CREATE_OUTPUT" ] && echo -e "${C_OFF}PR create said: $CREATE_OUTPUT${C_RESET}"
+                      echo -e "${C_OFF}Merge said: $MERGE_OUTPUT${C_RESET}"
+                      echo "Check the PR on GitHub: https://github.com/${REPO_TARGET}/pulls"
+                    fi
                   fi
                 fi
                 ;;
