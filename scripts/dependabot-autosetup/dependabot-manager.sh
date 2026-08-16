@@ -441,7 +441,6 @@ menu_unified_dashboard() {
       ;;
   esac
 }
-}
 
 # ================= Main Loop =================
 while true; do
