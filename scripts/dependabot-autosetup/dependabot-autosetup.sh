@@ -865,7 +865,13 @@ while true; do
           read -p "$(echo -e "${C_PROMPT}Would you like to merge any of these PRs now? [y/N]: ${C_RESET}")" MERGE_PRS_ANS
           case "$MERGE_PRS_ANS" in
             y|Y)
-              echo "$PR_RAW_DATA" | while IFS= read -r pr_line; do
+              # Read raw PR data into a bash array first.
+              # Piping data to a while-read loop redirects stdin to the pipe, which causes
+              # subsequent 'read -p' prompts inside the loop to fail or be skipped instantly.
+              # Storing lines in an array keeps stdin connected to the TTY.
+              IFS=$'\n' read -rd '' -a PR_LINES <<< "$PR_RAW_DATA"
+              for pr_line in "${PR_LINES[@]}"; do
+                [ -z "$pr_line" ] && continue
                 pr_num="${pr_line%%:*}"
                 pr_title="${pr_line#*:}"
                 
@@ -896,7 +902,8 @@ while true; do
                 fi
                 echo ""
 
-                read -p "$(echo -e "${C_PROMPT}Merge PR #${pr_num} now? [y/N]: ${C_RESET}")" SINGLE_PR_ANS
+                # Ask the user (stdin works correctly now)
+                read -p "$(echo -e "${C_PROMPT}Merge PR #${pr_num} now? [y/N]: ${C_RESET}")" < /dev/tty SINGLE_PR_ANS
                 case "$SINGLE_PR_ANS" in
                   y|Y)
                     echo -e "${C_OFF}Merging PR #${pr_num}...${C_RESET}"
