@@ -628,9 +628,9 @@ push_changes() {
           echo ""
           local UNCOMMITTED_CHOICE=""
           while true; do
-            echo -e "  ${C_HEADER}1)${C_RESET} Commit them to $DEFAULT_BRANCH now ${C_ON}(Recommended -- simplest, safest)${C_RESET}"
+            echo -e "  ${C_HEADER}1)${C_RESET} Commit them to $DEFAULT_BRANCH now ${C_OFF}(simplest, commits all files)${C_RESET}"
             echo -e "  ${C_HEADER}2)${C_RESET} Commit them to a new separate branch ${C_OFF}(keeps $DEFAULT_BRANCH clean, review later)${C_RESET}"
-            echo -e "  ${C_HEADER}3)${C_RESET} Skip -- push only Dependabot files ${C_WARN}(keeps other changes uncommitted locally)${C_RESET}"
+            echo -e "  ${C_HEADER}3)${C_RESET} Skip -- push only Dependabot files ${C_ON}(Recommended -- keeps other changes uncommitted locally)${C_RESET}"
             echo -e "  ${C_HEADER}4)${C_RESET} Cancel -- stop here, don't push anything"
             read -p "$(echo -e "${C_PROMPT}> ${C_RESET}")" UNCOMMITTED_CHOICE
             case "$UNCOMMITTED_CHOICE" in
