@@ -772,70 +772,94 @@ while true; do
 
   echo -e "${C_HEADER}Choose an action:${C_RESET}"
   echo -e "  ${C_HEADER}1)${C_RESET} Re-run setup / push changes"
-  echo -e "  ${C_HEADER}2)${C_RESET} Just push changes (no re-run)"
-  echo -e "  ${C_HEADER}3)${C_RESET} Toggle low-risk auto-merge"
-  echo -e "  ${C_HEADER}4)${C_RESET} Toggle high-risk auto-merge"
-  echo -e "  ${C_HEADER}5)${C_RESET} Toggle security alert emails"
-  echo -e "  ${C_HEADER}6)${C_RESET} Toggle repo visibility (public/private)"
-  echo -e "  ${C_HEADER}7)${C_RESET} Trigger manual Dependabot update check on GitHub"
-  echo -e "  ${C_HEADER}8)${C_RESET} Pull latest merged updates to local branch"
-  echo -e "  ${C_HEADER}9)${C_RESET} Uninstall dependabot-autosetup"
-  echo -e "  ${C_HEADER}10)${C_RESET} Exit"
+  echo -e "  ${C_HEADER}2)${C_RESET} Push changes (no re-run)"
+  echo -e "  ${C_HEADER}3)${C_RESET} Configure features (Auto-Merge, Security Alerts, Visibility)"
+  echo -e "  ${C_HEADER}4)${C_RESET} Run Dependabot check & pull updates"
+  echo -e "  ${C_HEADER}5)${C_RESET} Uninstall dependabot-autosetup"
+  echo -e "  ${C_HEADER}6)${C_RESET} Exit"
   read -p "$(echo -e "${C_PROMPT}> ${C_RESET}")" CHOICE
 
   case $CHOICE in
     1) SKIP_AUTO_SETUP=false; run_setup; refresh_status ;;
     2) push_changes; refresh_status ;;
     3)
-      if [ "$RISK_MODE" == "low" ] || [ "$RISK_MODE" == "all" ]; then write_workflow "none"; else write_workflow "low"; fi
-      echo -e "${C_OFF}Now: git add .github scripts/dependabot-autosetup && git commit -m 'Update Dependabot auto-merge' && git push${C_RESET}"
+      while true; do
+        echo ""
+        echo -e "${C_HEADER}=== Feature Configuration ===${C_RESET}"
+        if [ "$RISK_MODE" == "low" ] || [ "$RISK_MODE" == "all" ]; then LOW_DISP="${C_ON}On${C_RESET}"; else LOW_DISP="${C_OFF}Off${C_RESET}"; fi
+        if [ "$RISK_MODE" == "all" ]; then HIGH_DISP="${C_DANGER}On${C_RESET}"; else HIGH_DISP="${C_OFF}Off${C_RESET}"; fi
+        if [ "$ALERTS_STATUS" == "on" ]; then ALERT_DISP="${C_ON}On${C_RESET}"; elif [ "$ALERTS_STATUS" == "off" ]; then ALERT_DISP="${C_WARN}Off${C_RESET}"; else ALERT_DISP="${C_OFF}Unknown${C_RESET}"; fi
+        if [ "$REPO_VISIBILITY" == "public" ]; then VIS_DISP="${C_WARN}Public${C_RESET}"; elif [ "$REPO_VISIBILITY" == "private" ]; then VIS_DISP="${C_ON}Private${C_RESET}"; else VIS_DISP="${C_OFF}Unknown${C_RESET}"; fi
+
+        echo -e "  ${C_HEADER}1)${C_RESET} Toggle low-risk auto-merge   [Currently: $LOW_DISP]"
+        echo -e "  ${C_HEADER}2)${C_RESET} Toggle high-risk auto-merge  [Currently: $HIGH_DISP]"
+        echo -e "  ${C_HEADER}3)${C_RESET} Toggle security alert emails [Currently: $ALERT_DISP]"
+        echo -e "  ${C_HEADER}4)${C_RESET} Toggle repo visibility       [Currently: $VIS_DISP]"
+        echo -e "  ${C_HEADER}5)${C_RESET} Back to main menu"
+        read -p "$(echo -e "${C_PROMPT}> ${C_RESET}")" SUB_CHOICE
+
+        case $SUB_CHOICE in
+          1)
+            if [ "$RISK_MODE" == "low" ] || [ "$RISK_MODE" == "all" ]; then write_workflow "none"; else write_workflow "low"; fi
+            echo -e "${C_OFF}Now: git add .github scripts/dependabot-autosetup && git commit -m 'Update Dependabot auto-merge' && git push${C_RESET}"
+            refresh_status
+            ;;
+          2)
+            if [ "$RISK_MODE" == "all" ]; then write_workflow "low"; else write_workflow "all"; fi
+            echo -e "${C_OFF}Now: git add .github scripts/dependabot-autosetup && git commit -m 'Update Dependabot auto-merge' && git push${C_RESET}"
+            refresh_status
+            ;;
+          3)
+            if [ "$HAVE_GH" != "true" ] || [ -z "$REPO_TARGET" ]; then
+              echo -e "${C_DANGER}No connected GitHub repo -- can't toggle alerts.${C_RESET}"
+            elif [ "$ALERTS_STATUS" == "on" ]; then
+              gh api -X DELETE "repos/$REPO_TARGET/vulnerability-alerts" >/dev/null 2>&1 && echo -e "${C_OFF}Turned OFF.${C_RESET}"
+            else
+              gh api -X PUT "repos/$REPO_TARGET/vulnerability-alerts" >/dev/null 2>&1 && echo -e "${C_ON}Turned ON.${C_RESET}"
+            fi
+            refresh_status
+            ;;
+          4)
+            if [ "$HAVE_GH" != "true" ] || [ -z "$REPO_TARGET" ]; then
+              echo -e "${C_DANGER}No connected GitHub repo -- can't change visibility.${C_RESET}"
+            elif [ "$REPO_VISIBILITY" == "public" ]; then
+              gh repo edit "$REPO_TARGET" --visibility private --accept-visibility-change-consequences >/dev/null 2>&1 && echo -e "${C_ON}Set to private.${C_RESET}"
+            else
+              gh repo edit "$REPO_TARGET" --visibility public --accept-visibility-change-consequences >/dev/null 2>&1 && echo -e "${C_WARN}Set to public.${C_RESET}"
+            fi
+            refresh_status
+            ;;
+          5) break ;;
+          *) echo -e "${C_DANGER}Invalid choice.${C_RESET}" ;;
+        esac
+      done
       refresh_status
       ;;
     4)
-      if [ "$RISK_MODE" == "all" ]; then write_workflow "low"; else write_workflow "all"; fi
-      echo -e "${C_OFF}Now: git add .github scripts/dependabot-autosetup && git commit -m 'Update Dependabot auto-merge' && git push${C_RESET}"
-      refresh_status
-      ;;
-    5)
-      if [ "$HAVE_GH" != "true" ] || [ -z "$REPO_TARGET" ]; then
-        echo -e "${C_DANGER}No connected GitHub repo -- can't toggle alerts.${C_RESET}"
-      elif [ "$ALERTS_STATUS" == "on" ]; then
-        gh api -X DELETE "repos/$REPO_TARGET/vulnerability-alerts" >/dev/null 2>&1 && echo -e "${C_OFF}Turned OFF.${C_RESET}"
+      local CURR_BRANCH
+      CURR_BRANCH=$(git branch --show-current)
+      echo -e "${C_LABEL}Pulling latest updates from origin...${C_RESET}"
+      git fetch origin
+      if git pull origin "$CURR_BRANCH"; then
+        echo -e "${C_ON}Successfully pulled latest updates to your current local branch '${CURR_BRANCH}'.${C_RESET}"
       else
-        gh api -X PUT "repos/$REPO_TARGET/vulnerability-alerts" >/dev/null 2>&1 && echo -e "${C_ON}Turned ON.${C_RESET}"
+        echo -e "${C_DANGER}Failed to pull updates.${C_RESET} Please check if you have uncommitted changes or conflicts."
       fi
-      refresh_status
-      ;;
-    6)
+
       if [ "$HAVE_GH" != "true" ] || [ -z "$REPO_TARGET" ]; then
-        echo -e "${C_DANGER}No connected GitHub repo -- can't change visibility.${C_RESET}"
-      elif [ "$REPO_VISIBILITY" == "public" ]; then
-        gh repo edit "$REPO_TARGET" --visibility private --accept-visibility-change-consequences >/dev/null 2>&1 && echo -e "${C_ON}Set to private.${C_RESET}"
-      else
-        gh repo edit "$REPO_TARGET" --visibility public --accept-visibility-change-consequences >/dev/null 2>&1 && echo -e "${C_WARN}Set to public.${C_RESET}"
-      fi
-      refresh_status
-      ;;
-    7)
-      if [ "$HAVE_GH" != "true" ] || [ -z "$REPO_TARGET" ]; then
-        echo -e "${C_DANGER}No connected GitHub repo -- can't trigger update check.${C_RESET}"
+        echo -e "${C_DANGER}No connected GitHub repo -- can't trigger manual update check.${C_RESET}"
       else
         echo -e "${C_LABEL}Triggering Dependabot update checks...${C_RESET}"
-        # We need to trigger for each ecosystem we have configured
         if [ "$LOCAL_CONFIG" == "true" ]; then
-          # Get list of configured ecosystems
           local CONFIGURED_ECOS
           CONFIGURED_ECOS=$(grep "package-ecosystem:" .github/dependabot.yml | awk -F'"' '{print $2}')
           [ -z "$CONFIGURED_ECOS" ] && CONFIGURED_ECOS=$(grep "package-ecosystem:" .github/dependabot.yml | awk '{print $2}' | tr -d '"'\''')
           if [ -n "$CONFIGURED_ECOS" ]; then
-            # Kick off check runs using GitHub API
-            local TRIGGER_ERR=false
             echo -e "${C_OFF}Kicking off check runs on GitHub's servers...${C_RESET}"
             if gh api -X POST "repos/$REPO_TARGET/dependabot/updates/trigger" >/dev/null 2>&1; then
               echo -e "${C_ON}Dependabot updates check runs triggered successfully on GitHub.${C_RESET}"
               echo -e "${C_OFF}Dependabot will check for updates and output PRs/emails in the background.${C_RESET}"
             else
-              # Fallback to general repository check-run dispatch if endpoint behaves unexpectedly on older repositories
               echo -e "${C_WARN}Dependabot updates API trigger endpoint failed or not active on this repository yet.${C_RESET}"
               echo -e "${C_OFF}Dependabot updates run automatically on push/sync of config. Make sure config has been pushed to GitHub.${C_RESET}"
             fi
@@ -846,21 +870,10 @@ while true; do
           echo -e "${C_DANGER}Local dependabot.yml configuration file not found.${C_RESET}"
         fi
       fi
-      ;;
-    8)
-      local CURR_BRANCH
-      CURR_BRANCH=$(git branch --show-current)
-      echo -e "${C_LABEL}Pulling latest updates from origin...${C_RESET}"
-      git fetch origin
-      if git pull origin "$CURR_BRANCH"; then
-        echo -e "${C_ON}Successfully pulled latest updates to your current local branch '${CURR_BRANCH}'.${C_RESET}"
-      else
-        echo -e "${C_DANGER}Failed to pull updates.${C_RESET} Please check if you have uncommitted changes or conflicts."
-      fi
       refresh_status
       ;;
-    9) uninstall_dependabot; refresh_status ;;
-    10) echo -e "${C_ON}Done.${C_RESET}"; break ;;
+    5) uninstall_dependabot; refresh_status ;;
+    6) echo -e "${C_ON}Done.${C_RESET}"; break ;;
     *) echo -e "${C_DANGER}Invalid choice.${C_RESET}" ;;
   esac
 done
