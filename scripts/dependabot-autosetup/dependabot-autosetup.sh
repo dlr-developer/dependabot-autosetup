@@ -852,7 +852,6 @@ while true; do
         echo -e "${C_LABEL}Checking open Dependabot PRs...${C_RESET}"
         # Fetch PR numbers and titles
         # Using a temporary file to read raw data cleanly into an array, keeping stdin completely free of piping
-        local TEMP_PR_FILE
         TEMP_PR_FILE=$(mktemp)
         gh pr list --repo "$REPO_TARGET" --author "app/dependabot" --json number,title --jq '.[] | "\(.number):\(.title)"' > "$TEMP_PR_FILE" 2>/dev/null
         
@@ -916,7 +915,6 @@ while true; do
                     else
                       # If direct merge fails (e.g. conflicts), try to checkout and rebase-resolve them
                       echo -e "${C_WARN}Direct merge blocked by conflicts. Attempting local rebase resolution...${C_RESET}"
-                      local PREV_BRANCH
                       PREV_BRANCH=$(git branch --show-current)
                       if gh pr checkout "$pr_num" >/dev/null 2>&1; then
                         git fetch origin "$CURR_BRANCH" >/dev/null 2>&1
