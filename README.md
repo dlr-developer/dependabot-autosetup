@@ -112,6 +112,7 @@ Requires [Git for Windows](https://git-scm.com/download/win) (the `.bat` launche
 | 🔒 **Manages** | Toggle Dependabot security alert emails and repo visibility (public/private) via sub-menu |
 | 🔁 **Re-runnable** | Check status and change settings any time -- won't duplicate work already done |
 | ⚡ **Updates** | Lists open Dependabot PRs, evaluates their risk levels (low/high), lets you merge them interactively, and pulls updates locally in one step |
+| 🔄 **Auto-Updates** | Prompts you to auto-update and hot-reload when running the script if a new version is released |
 | 🧬 **Self-updating** | Looks up new Dependabot ecosystems automatically as GitHub adds support for them |
 
 ---
@@ -130,6 +131,25 @@ Requires [Git for Windows](https://git-scm.com/download/win) (the `.bat` launche
 8. You land on a status menu: re-run setup, push changes, configure features (auto-merge risk levels, alerts, repo visibility), check PRs & pull updates (with interactive risk-assessed merging), uninstall, or exit.
 
 **Every run after that:** it shows you the current status first, then the same menu -- nothing gets duplicated, and you can change any setting at any time by re-running the script.
+
+---
+
+## 🔄 Auto-Update & Cloud Propagation
+
+This tool features a dual auto-update system to keep all your configured projects up to date:
+
+### 1. Interactive Self-Updater (Local)
+Whenever you launch `dependabot-autosetup.sh` locally, it checks if a newer version exists on GitHub. If one is found, it prompts you:
+`Would you like to auto-update? [y/N]`
+Selecting `y` downloads the updates, automatically commits and pushes them to your active repository, and hot-reloads the tool immediately.
+
+### 2. Centralized Cloud Propagator (Cloud Actions)
+You can configure a GitHub Actions workflow to automatically push script updates from your fork of `dependabot-autosetup` to all your private repositories whenever you update your main release.
+
+To enable this:
+1. Generate a **GitHub Personal Access Token (PAT)** classic with the `repo` scope selected.
+2. Save it in your `dependabot-autosetup` repository secrets named `PROPAGATE_TOKEN`.
+3. The workflow file at `.github/workflows/propagate-updates.yml` will handle the rest!
 
 ---
 
