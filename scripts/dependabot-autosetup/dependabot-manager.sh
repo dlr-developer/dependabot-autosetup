@@ -59,12 +59,17 @@ scan_repositories() {
   local found_repos=()
   for parent_dir in "${SCAN_DIRS[@]}"; do
     if [ -d "$parent_dir" ]; then
-      # Find all directories containing .git
-      while IFS= read -r gitdir; do
-        local repo_dir
-        repo_dir=$(dirname "$gitdir")
-        found_repos+=("$repo_dir")
-      done < <(find "$parent_dir" -maxdepth 3 -name ".git" -type d 2>/dev/null)
+      # Find all first-level subdirectories (excluding hidden ones like .git or .github)
+      while IFS= read -r subdir; do
+        if [ -d "$subdir" ]; then
+          local base
+          base=$(basename "$subdir")
+          # Ignore hidden directories and common backup/archive naming styles
+          if [[ ! "$base" =~ ^\. ]] && [ "$base" != "Backups" ]; then
+            found_repos+=("$subdir")
+          fi
+        fi
+      done < <(find "$parent_dir" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort)
     fi
   done
   echo "${found_repos[@]}"
