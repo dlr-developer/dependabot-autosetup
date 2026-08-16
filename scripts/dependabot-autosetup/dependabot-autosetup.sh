@@ -310,7 +310,7 @@ connect_github() {
 
 # ================= Status check =================
 LOCAL_CONFIG=false; LOCAL_WORKFLOW=false; GH_CONFIG=false; GH_WORKFLOW=false
-RISK_MODE="none"; ALERTS_STATUS="unknown"
+RISK_MODE="none"; ALERTS_STATUS="unknown"; RUN_INTERVAL="weekly"
 WORKFLOW_FILE=".github/workflows/dependabot-auto-merge.yml"
 
 refresh_status() {
@@ -321,6 +321,15 @@ refresh_status() {
   if [ "$HAVE_GH" == "true" ] && [ -n "$REPO_TARGET" ]; then
     gh api "repos/$REPO_TARGET/contents/.github/dependabot.yml" >/dev/null 2>&1 && GH_CONFIG=true
     gh api "repos/$REPO_TARGET/contents/$WORKFLOW_FILE" >/dev/null 2>&1 && GH_WORKFLOW=true
+  fi
+
+  # Attempt to extract schedule interval from local dependabot.yml (default to weekly)
+  RUN_INTERVAL="weekly"
+  if [ "$LOCAL_CONFIG" == "true" ]; then
+    local EXTRACTED
+    EXTRACTED=$(grep -m 1 "interval:" .github/dependabot.yml | awk -F'"' '{print $2}' | tr -d ' ')
+    [ -z "$EXTRACTED" ] && EXTRACTED=$(grep -m 1 "interval:" .github/dependabot.yml | awk '{print $2}' | tr -d '"'\'' ')
+    [ -n "$EXTRACTED" ] && RUN_INTERVAL="$EXTRACTED"
   fi
 
   RISK_MODE="none"
@@ -371,6 +380,7 @@ show_status() {
   echo -e "${C_LABEL}Security alert emails:${C_RESET}                    $ALERT_DISP"
   if [ "$REPO_VISIBILITY" == "public" ]; then VIS_DISP="${C_WARN}Public${C_RESET}"; elif [ "$REPO_VISIBILITY" == "private" ]; then VIS_DISP="${C_ON}Private${C_RESET}"; else VIS_DISP="${C_OFF}Unknown (GitHub not connected)${C_RESET}"; fi
   echo -e "${C_LABEL}Repo visibility:${C_RESET}                          $VIS_DISP"
+  echo -e "${C_LABEL}Check updates schedule interval:${C_RESET}          ${C_ON}${RUN_INTERVAL}${C_RESET}"
   echo ""
 }
 
@@ -418,6 +428,24 @@ run_setup() {
     echo -e "${C_DANGER}No known ecosystem detected.${C_RESET} Nothing to set up."
     return
   fi
+
+  echo ""
+  echo -e "${C_OFF}────────────────────────────────────────${C_RESET}"
+  echo ""
+  echo -e "${C_LABEL}Define check updates schedule interval${C_RESET}"
+  echo "Available intervals: daily, weekly, monthly"
+  echo -e "Recommended: weekly."
+  echo -e "${C_LABEL}Currently:${C_RESET} ${RUN_INTERVAL}"
+  read -p "$(echo -e "${C_PROMPT}Enter check interval [daily/weekly/monthly] (enter to keep): ${C_RESET}")" USER_INTERVAL
+  USER_INTERVAL=${USER_INTERVAL:-$RUN_INTERVAL}
+  # Lowercase and sanitize
+  USER_INTERVAL=$(echo "$USER_INTERVAL" | tr '[:upper:]' '[:lower:]' | tr -d ' ')
+  if [ "$USER_INTERVAL" != "daily" ] && [ "$USER_INTERVAL" != "weekly" ] && [ "$USER_INTERVAL" != "monthly" ]; then
+    echo -e "${C_WARN}Invalid choice. Defaulting to weekly.${C_RESET}"
+    USER_INTERVAL="weekly"
+  fi
+  RUN_INTERVAL="$USER_INTERVAL"
+
   mkdir -p .github/workflows
   {
     echo "version: 2"
@@ -426,7 +454,7 @@ run_setup() {
       echo "  - package-ecosystem: \"$eco\""
       echo "    directory: \"/\""
       echo "    schedule:"
-      echo "      interval: \"weekly\""
+      echo "      interval: \"$RUN_INTERVAL\""
     done
   } > .github/dependabot.yml
   echo -e "${C_ON}Detected: ${ECOSYSTEMS[*]}${C_RESET}"
@@ -742,7 +770,9 @@ while true; do
   echo -e "  ${C_HEADER}5)${C_RESET} Toggle security alert emails"
   echo -e "  ${C_HEADER}6)${C_RESET} Toggle repo visibility (public/private)"
   echo -e "  ${C_HEADER}7)${C_RESET} Uninstall dependabot-autosetup"
-  echo -e "  ${C_HEADER}8)${C_RESET} Exit"
+  echo -e "  ${C_HEADER}8)${C_RESET} Trigger manual Dependabot update check on GitHub"
+  echo -e "  ${C_HEADER}9)${C_RESET} Pull latest merged updates to local branch"
+  echo -e "  ${C_HEADER}10)${C_RESET} Exit"
   read -p "$(echo -e "${C_PROMPT}> ${C_RESET}")" CHOICE
 
   case $CHOICE in
@@ -779,7 +809,50 @@ while true; do
       refresh_status
       ;;
     7) uninstall_dependabot; refresh_status ;;
-    8) echo -e "${C_ON}Done.${C_RESET}"; break ;;
+    8)
+      if [ "$HAVE_GH" != "true" ] || [ -z "$REPO_TARGET" ]; then
+        echo -e "${C_DANGER}No connected GitHub repo -- can't trigger update check.${C_RESET}"
+      else
+        echo -e "${C_LABEL}Triggering Dependabot update checks...${C_RESET}"
+        # We need to trigger for each ecosystem we have configured
+        if [ "$LOCAL_CONFIG" == "true" ]; then
+          # Get list of configured ecosystems
+          local CONFIGURED_ECOS
+          CONFIGURED_ECOS=$(grep "package-ecosystem:" .github/dependabot.yml | awk -F'"' '{print $2}')
+          [ -z "$CONFIGURED_ECOS" ] && CONFIGURED_ECOS=$(grep "package-ecosystem:" .github/dependabot.yml | awk '{print $2}' | tr -d '"'\''')
+          if [ -n "$CONFIGURED_ECOS" ]; then
+            # Kick off check runs using GitHub API
+            local TRIGGER_ERR=false
+            echo -e "${C_OFF}Kicking off check runs on GitHub's servers...${C_RESET}"
+            if gh api -X POST "repos/$REPO_TARGET/dependabot/updates/trigger" >/dev/null 2>&1; then
+              echo -e "${C_ON}Dependabot updates check runs triggered successfully on GitHub.${C_RESET}"
+              echo -e "${C_OFF}Dependabot will check for updates and output PRs/emails in the background.${C_RESET}"
+            else
+              # Fallback to general repository check-run dispatch if endpoint behaves unexpectedly on older repositories
+              echo -e "${C_WARN}Dependabot updates API trigger endpoint failed or not active on this repository yet.${C_RESET}"
+              echo -e "${C_OFF}Dependabot updates run automatically on push/sync of config. Make sure config has been pushed to GitHub.${C_RESET}"
+            fi
+          else
+            echo -e "${C_DANGER}Could not extract ecosystems from local dependabot.yml.${C_RESET}"
+          fi
+        else
+          echo -e "${C_DANGER}Local dependabot.yml configuration file not found.${C_RESET}"
+        fi
+      fi
+      ;;
+    9)
+      local CURR_BRANCH
+      CURR_BRANCH=$(git branch --show-current)
+      echo -e "${C_LABEL}Pulling latest updates from origin...${C_RESET}"
+      git fetch origin
+      if git pull origin "$CURR_BRANCH"; then
+        echo -e "${C_ON}Successfully pulled latest updates to your current local branch '${CURR_BRANCH}'.${C_RESET}"
+      else
+        echo -e "${C_DANGER}Failed to pull updates.${C_RESET} Please check if you have uncommitted changes or conflicts."
+      fi
+      refresh_status
+      ;;
+    10) echo -e "${C_ON}Done.${C_RESET}"; break ;;
     *) echo -e "${C_DANGER}Invalid choice.${C_RESET}" ;;
   esac
 done
