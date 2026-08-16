@@ -89,15 +89,22 @@ menu_configure_folders() {
     read -p "$(echo -e "${C_PROMPT}Choose an action: ${C_RESET}")" CHOICE
     case "$CHOICE" in
       a|A)
-        read -p "$(echo -e "${C_PROMPT}Enter parent directory to scan (e.g. C:\Projects): ${C_RESET}")" NEW_DIR
-        # Clean paths for slash consistency
+        read -p "$(echo -e "${C_PROMPT}Enter parent directory to scan (e.g. C:\\Projects): ${C_RESET}")" -r NEW_DIR
+        # Clean paths for slash consistency: translate backslashes to forward slashes
         NEW_DIR="${NEW_DIR//\\//}"
-        if [ -d "$NEW_DIR" ]; then
-          SCAN_DIRS+=("$NEW_DIR")
+        # If path looks like C:/..., translate to /c/... for bash compatibility checks
+        local CHECK_DIR="$NEW_DIR"
+        if [[ "$NEW_DIR" =~ ^([A-Za-z]):/(.*) ]]; then
+          local drive="${BASH_REMATCH[1],,}"
+          local rest="${BASH_REMATCH[2]}"
+          CHECK_DIR="/${drive}/${rest}"
+        fi
+        if [ -d "$CHECK_DIR" ]; then
+          SCAN_DIRS+=("$CHECK_DIR")
           save_config
-          echo -e "${C_ON}Added $NEW_DIR${C_RESET}"
+          echo -e "${C_ON}Added $CHECK_DIR${C_RESET}"
         else
-          echo -e "${C_DANGER}Directory does not exist!${C_RESET}"
+          echo -e "${C_DANGER}Directory does not exist! Checked: $CHECK_DIR${C_RESET}"
         fi
         ;;
       d|D)
