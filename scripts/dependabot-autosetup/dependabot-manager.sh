@@ -282,7 +282,9 @@ menu_unified_dashboard() {
             local risk_str="${C_ON}Low-Risk${C_RESET}"
             [ "$is_high" = "true" ] && risk_str="${C_DANGER}High-Risk${C_RESET}"
             
-            printf "  %-3d  %-15s  #%-4s  %-10s  %s\n" "$dashboard_counter" "$repo_name" "$pr_num" "$risk_str" "$pr_title"
+            local formatted_line
+            formatted_line=$(printf "  %-3d  %-15s  #%-4s  %-23s  %s" "$dashboard_counter" "$repo_name" "$pr_num" "$risk_str" "$pr_title")
+            echo -e "$formatted_line"
             dashboard_prs+=("$dashboard_counter|$repo_path|$pr_num|$pr_title|$is_high")
             dashboard_counter=$((dashboard_counter+1))
           fi
