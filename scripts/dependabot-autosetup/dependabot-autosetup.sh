@@ -850,11 +850,41 @@ while true; do
       else
         echo ""
         echo -e "${C_LABEL}Checking open Dependabot PRs...${C_RESET}"
-        # Fetch PR list filtered by author = app/dependabot or matching the bot name
-        PR_LIST=$(gh pr list --repo "$REPO_TARGET" --author "app/dependabot" --json number,title,state,url --jq '.[] | "#\(.number) \(.title) (\(.url))"' 2>/dev/null)
-        if [ -n "$PR_LIST" ]; then
+        # Fetch PR numbers and titles
+        PR_RAW_DATA=$(gh pr list --repo "$REPO_TARGET" --author "app/dependabot" --json number,title --jq '.[] | "\(.number):\(.title)"' 2>/dev/null)
+        if [ -n "$PR_RAW_DATA" ]; then
           echo -e "${C_ON}Open Dependabot PRs:${C_RESET}"
-          echo -e "$PR_LIST"
+          # Display all PRs first
+          echo "$PR_RAW_DATA" | while IFS= read -r pr_line; do
+            pr_num="${pr_line%%:*}"
+            pr_title="${pr_line#*:}"
+            echo -e "  #${pr_num} ${pr_title}"
+          done
+          echo ""
+
+          read -p "$(echo -e "${C_PROMPT}Would you like to merge any of these PRs now? [y/N]: ${C_RESET}")" MERGE_PRS_ANS
+          case "$MERGE_PRS_ANS" in
+            y|Y)
+              echo "$PR_RAW_DATA" | while IFS= read -r pr_line; do
+                pr_num="${pr_line%%:*}"
+                pr_title="${pr_line#*:}"
+                read -p "$(echo -e "${C_PROMPT}Merge PR #${pr_num} (\"${pr_title}\")? [y/N]: ${C_RESET}")" SINGLE_PR_ANS
+                case "$SINGLE_PR_ANS" in
+                  y|Y)
+                    echo -e "${C_OFF}Merging PR #${pr_num}...${C_RESET}"
+                    if gh pr merge "$pr_num" --merge --delete-branch; then
+                      echo -e "${C_ON}Merged PR #${pr_num}.${C_RESET}"
+                    else
+                      echo -e "${C_DANGER}Failed to merge PR #${pr_num}.${C_RESET}"
+                    fi
+                    ;;
+                esac
+              done
+              # Pull changes locally if any PRs were merged
+              echo -e "${C_LABEL}Pulling latest merged updates to local branch...${C_RESET}"
+              git pull origin "$CURR_BRANCH" 2>/dev/null
+              ;;
+          esac
         else
           echo -e "${C_OFF}No open Dependabot Pull Requests found on GitHub.${C_RESET}"
         fi
