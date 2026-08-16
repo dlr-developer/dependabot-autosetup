@@ -74,21 +74,27 @@ menu_configure_folders() {
   while true; do
     echo ""
     echo -e "${C_HEADER}=== Configure Scan Directories ===${C_RESET}"
+    echo -e "${C_LABEL}Instructions:${C_RESET}"
+    echo "  Enter the parent folders where your project directories are kept (e.g. C:\Projects)."
+    echo "  The manager script will scan these folders recursively up to 3 levels deep to"
+    echo "  locate Git repositories to manage and setup."
+    echo ""
     if [ ${#SCAN_DIRS[@]} -eq 0 ]; then
-      echo -e "${C_OFF}(No directories configured yet)${C_RESET}"
+      echo -e "${C_OFF}(No directories configured yet. Add one below to get started.)${C_RESET}"
     else
+      echo -e "${C_LABEL}Currently Configured Directories:${C_RESET}"
       for i in "${!SCAN_DIRS[@]}"; do
         echo -e "  $((i+1)) [x] ${SCAN_DIRS[$i]}"
       done
     fi
     echo ""
-    echo -e "  ${C_HEADER}a)${C_RESET} Add a directory"
-    echo -e "  ${C_HEADER}d)${C_RESET} Delete a directory"
-    echo -e "  ${C_HEADER}b)${C_RESET} Back to Main Menu"
+    echo -e "  ${C_HEADER}1)${C_RESET} Add a directory"
+    echo -e "  ${C_HEADER}2)${C_RESET} Delete a directory"
+    echo -e "  ${C_HEADER}3)${C_RESET} Back to Main Menu"
     echo ""
     read -p "$(echo -e "${C_PROMPT}Choose an action: ${C_RESET}")" CHOICE
     case "$CHOICE" in
-      a|A)
+      1)
         read -p "$(echo -e "${C_PROMPT}Enter parent directory to scan (e.g. C:\\Projects): ${C_RESET}")" -r NEW_DIR
         # Clean paths for slash consistency: translate backslashes to forward slashes
         NEW_DIR="${NEW_DIR//\\//}"
@@ -107,7 +113,7 @@ menu_configure_folders() {
           echo -e "${C_DANGER}Directory does not exist! Checked: $CHECK_DIR${C_RESET}"
         fi
         ;;
-      d|D)
+      2)
         if [ ${#SCAN_DIRS[@]} -eq 0 ]; then
           echo -e "${C_DANGER}No directories to delete.${C_RESET}"
         else
@@ -122,7 +128,7 @@ menu_configure_folders() {
           fi
         fi
         ;;
-      b|B)
+      3)
         break
         ;;
     esac
@@ -316,6 +322,12 @@ menu_unified_dashboard() {
 
 # ================= Main Loop =================
 while true; do
+  if [ ${#SCAN_DIRS[@]} -eq 0 ]; then
+    echo -e "${C_WARN}⚠️ No scan directories configured yet. Redirecting to configuration menu...${C_RESET}"
+    menu_configure_folders
+    continue
+  fi
+
   echo ""
   echo -e "${C_HEADER}=== dependabot-autosetup Central Manager (v${VERSION}) ===${C_RESET}"
   echo -e "  ${C_HEADER}1)${C_RESET} View Unified PR Dashboard"
