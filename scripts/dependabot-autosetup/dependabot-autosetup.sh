@@ -889,11 +889,11 @@ while true; do
             echo -e "  Status: ${C_ON}All Systems Operational (${desc})${C_RESET}"
           else
             echo -e "  Status: ${C_DANGER}Incident detected: ${indicator^^} Outage (${desc})${C_RESET}"
-            echo ""
             echo -e "  ${C_LABEL}Affected Components:${C_RESET}"
-            
-            # Match only individual components inside the "components" JSON array to avoid duplicating parent status objects.
-            # Array entries are wrapped like: {"id":"...","name":"...","status":"..."} and don't contain nested braces.
+            # Parse the JSON component array. Elements are formatted as {"id":"...","name":"...","status":"..."}
+            # We strip anything before the "components" list token and extract all bracketed entries.
+            local comp_list
+            comp_list=$(echo "$status_raw" | sed 's/.*"components":\[//; s/\],"vulnerability_alerts".*//')
             while IFS= read -r comp; do
               if [ -n "$comp" ]; then
                 c_name=$(echo "$comp" | grep -oP '"name":"\K[^"]+')
@@ -907,7 +907,7 @@ while true; do
                   fi
                 fi
               fi
-            done < <(echo "$status_raw" | grep -oP '"components":\[\K.*(?=\],"vulnerability_alerts")' | grep -oP '\{[^\}]+\}' || true)
+            done < <(echo "$comp_list" | grep -oP '\{[^\}]+\}' || true)
           fi
         else
           echo -e "  Status: ${C_DANGER}Could not reach https://www.githubstatus.com${C_RESET}"
