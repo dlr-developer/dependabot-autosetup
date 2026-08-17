@@ -514,7 +514,8 @@ menu_unified_dashboard() {
           fi
         done
 
-        while true; do
+        local filt_loop_exit=false
+        while [ "$filt_loop_exit" = "false" ]; do
           echo ""
           echo -e "${C_OFF}────────────────────────────────────────${C_RESET}"
           echo -e "${C_HEADER}=== Repository: $chosen_rname ===${C_RESET}"
@@ -529,14 +530,27 @@ menu_unified_dashboard() {
             curr_rname=$(basename "$pr_repo")
             if [ "$curr_rname" = "$chosen_rname" ]; then
               local r_str="${C_ON}Low-Risk${C_RESET}"
-              [ "$pr_risk" = "true" ] && r_str="${C_DANGER}High-Risk${C_RESET}"
+              local raw_r="Low-Risk"
+              if [ "$pr_risk" = "true" ]; then
+                r_str="${C_DANGER}High-Risk${C_RESET}"
+                raw_r="High-Risk"
+              fi
               
-              # Format prefix and wrap description
+              # Calculate widths without ANSI escape characters first
+              local col_fid col_fpr col_frisk
+              col_fid=$(printf "%-3s" "$pr_id")
+              col_fpr=$(printf "%-5s" "#${pr_num}")
+              col_frisk=$(printf "%-10s" "$raw_r")
+              
+              local colored_risk_padded
+              colored_risk_padded="${col_frisk/Low-Risk/$r_str}"
+              colored_risk_padded="${colored_risk_padded/High-Risk/$r_str}"
+              
               local f_prefix
-              f_prefix=$(printf "  %-3d  #%-5s %-23s  " "$pr_id" "$pr_num" "$r_str")
+              f_prefix="  ${col_fid}  ${col_fpr}  ${colored_risk_padded}  "
               
               local term_width=80
-              local desc_width=$((term_width - 36))
+              local desc_width=$((term_width - 26))
               [ $desc_width -lt 30 ] && desc_width=30
               
               local wrapped_desc
@@ -547,7 +561,7 @@ menu_unified_dashboard() {
                 if [ $line_idx -eq 0 ]; then
                   echo -e "${f_prefix}${line}"
                 else
-                  printf "                                    %s\n" "$line"
+                  printf "                            %s\n" "$line"
                 fi
                 line_idx=$((line_idx+1))
               done <<< "$wrapped_desc"
@@ -624,7 +638,7 @@ menu_unified_dashboard() {
               cd "$SELF_DIR"
               ;;
             6|*)
-              break
+              filt_loop_exit=true
               ;;
           esac
         done
