@@ -842,7 +842,7 @@ while true; do
     continue
   fi
 
-  local SHOW_OUTAGE_OPTS=false
+  SHOW_OUTAGE_OPTS=false
   if [ "$ALERTS_STATUS" == "outage" ]; then
     SHOW_OUTAGE_OPTS=true
   fi
@@ -854,45 +854,40 @@ while true; do
   echo -e "  ${C_HEADER}4)${C_RESET} Run Dependabot check & pull updates"
   echo -e "  ${C_HEADER}5)${C_RESET} Uninstall dependabot-autosetup"
   if [ "$SHOW_OUTAGE_OPTS" == "true" ]; then
-    echo -e "  ${C_HEADER}t1)${C_RESET} Test GitHub API status"
-    echo -e "  ${C_HEADER}t2)${C_RESET} Test GitHub Status dashboard"
+    echo -e "  ${C_HEADER}t)${C_RESET} Check GitHub Servers Status"
   fi
   echo -e "  ${C_HEADER}6)${C_RESET} Exit"
   read -p "$(echo -e "${C_PROMPT}> ${C_RESET}")" CHOICE
 
   case $CHOICE in
-    t1|T1)
+    t|T)
       echo ""
-      echo -e "${C_OFF}Testing GitHub API connection...${C_RESET}"
-      local api_test
+      echo -e "${C_OFF}────────────────────────────────────────${C_RESET}"
+      echo -e "${C_HEADER}=== GitHub Outage Diagnostics ===${C_RESET}"
+      echo ""
+      echo -e "${C_LABEL}[1] Testing GitHub API connection...${C_RESET}"
       api_test=$(gh api user --jq .login 2>&1)
-      if [[ "$api_test" =~ "No server" || "$api_test" =~ "503" ]]; then
-        echo -e "${C_DANGER}GitHub API is down (503 Service Unavailable).${C_RESET}"
+      if [[ "$api_test" =~ "No server" || "$api_test" =~ "503" || "$api_test" =~ "timeout" ]]; then
+        echo -e "  Status: ${C_DANGER}API Down (503 Service Unavailable)${C_RESET}"
       else
-        echo -e "${C_ON}GitHub API is operational. Sign in verified as: ${api_test}${C_RESET}"
+        echo -e "  Status: ${C_ON}API Up (Verified as ${api_test})${C_RESET}"
       fi
-      read -n 1 -s -r -p "Press any key to continue..."
+      
       echo ""
-      refresh_status
-      continue
-      ;;
-    t2|T2)
-      echo ""
-      echo -e "${C_OFF}Querying GitHub Status API...${C_RESET}"
-      local status_raw
+      echo -e "${C_LABEL}[2] Querying GitHub Status page...${C_RESET}"
       status_raw=$(curl -fsSL --max-time 5 https://www.githubstatus.com/api/v2/summary.json 2>/dev/null)
       if [ -n "$status_raw" ]; then
-        local indicator desc
         indicator=$(echo "$status_raw" | grep -oP '"indicator":"\K[^"]+')
         desc=$(echo "$status_raw" | grep -oP '"description":"\K[^"]+')
         if [ "$indicator" == "none" ]; then
-          echo -e "${C_ON}All Systems Operational (${desc})${C_RESET}"
+          echo -e "  Status: ${C_ON}All Systems Operational (${desc})${C_RESET}"
         else
-          echo -e "${C_DANGER}Incident detected: ${indicator^^} Outage (${desc})${C_RESET}"
+          echo -e "  Status: ${C_DANGER}Incident detected: ${indicator^^} Outage (${desc})${C_RESET}"
         fi
       else
-        echo -e "${C_DANGER}Could not reach GitHub Status page.${C_RESET}"
+        echo -e "  Status: ${C_DANGER}Could not reach https://www.githubstatus.com${C_RESET}"
       fi
+      echo ""
       read -n 1 -s -r -p "Press any key to continue..."
       echo ""
       refresh_status
