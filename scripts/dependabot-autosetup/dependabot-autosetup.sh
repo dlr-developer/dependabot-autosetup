@@ -854,65 +854,87 @@ while true; do
   echo -e "  ${C_HEADER}4)${C_RESET} Run Dependabot check & pull updates"
   echo -e "  ${C_HEADER}5)${C_RESET} Uninstall dependabot-autosetup"
   if [ "$SHOW_OUTAGE_OPTS" == "true" ]; then
-    echo -e "  ${C_HEADER}t)${C_RESET} Check GitHub Servers Status"
+    echo -e "  ${C_DANGER}t) Check GitHub Servers Status${C_RESET}"
   fi
   echo -e "  ${C_HEADER}6)${C_RESET} Exit"
   read -p "$(echo -e "${C_PROMPT}> ${C_RESET}")" CHOICE
 
   case $CHOICE in
     t|T)
-      echo ""
-      echo -e "${C_OFF}────────────────────────────────────────${C_RESET}"
-      echo -e "${C_HEADER}=== GitHub Outage Diagnostics ===${C_RESET}"
-      echo ""
-      echo -e "${C_LABEL}[1] Testing GitHub API connection...${C_RESET}"
-      api_test=$(gh api user --jq .login 2>&1)
-      if [[ "$api_test" =~ "No server" || "$api_test" =~ "503" || "$api_test" =~ "timeout" ]]; then
-        echo -e "  Status: ${C_DANGER}API Down (503 Service Unavailable)${C_RESET}"
-      else
-        echo -e "  Status: ${C_ON}API Up (Verified as ${api_test})${C_RESET}"
+      if [ "$SHOW_OUTAGE_OPTS" != "true" ]; then
+        echo -e "${C_DANGER}Invalid choice.${C_RESET}"
+        continue
       fi
       
-      echo ""
-      echo -e "${C_LABEL}[2] Querying GitHub Status page...${C_RESET}"
-      status_raw=$(curl -fsSL --max-time 5 https://www.githubstatus.com/api/v2/summary.json 2>/dev/null)
-      if [ -n "$status_raw" ]; then
-        indicator=$(echo "$status_raw" | grep -oP '"indicator":"\K[^"]+')
-        desc=$(echo "$status_raw" | grep -oP '"description":"\K[^"]+')
-        if [ "$indicator" == "none" ]; then
-          echo -e "  Status: ${C_ON}All Systems Operational (${desc})${C_RESET}"
+      while true; do
+        echo ""
+        echo -e "${C_OFF}────────────────────────────────────────${C_RESET}"
+        echo -e "${C_HEADER}=== GitHub Outage Diagnostics ===${C_RESET}"
+        echo ""
+        echo -e "${C_LABEL}[1] Testing GitHub API connection...${C_RESET}"
+        api_test=$(gh api user --jq .login 2>&1)
+        if [[ "$api_test" =~ "No server" || "$api_test" =~ "503" || "$api_test" =~ "timeout" ]]; then
+          echo -e "  Status: ${C_DANGER}API Down (503 Service Unavailable)${C_RESET}"
         else
-          echo -e "  Status: ${C_DANGER}Incident detected: ${indicator^^} Outage (${desc})${C_RESET}"
-          echo ""
-          echo -e "  ${C_LABEL}Affected Components:${C_RESET}"
-          
-          # Simple regex matching for components with status other than "operational"
-          # summary.json contains array of: {"id":"...","name":"...","status":"..."}
-          # We extract names and statuses where status != "operational"
-          while IFS= read -r comp; do
-            if [ -n "$comp" ]; then
-              c_name=$(echo "$comp" | grep -oP '"name":"\K[^"]+')
-              c_status=$(echo "$comp" | grep -oP '"status":"\K[^"]+')
-              if [ -n "$c_name" ] && [ -n "$c_status" ] && [ "$c_status" != "operational" ]; then
-                # Uppercase status for visibility
-                status_upper=$(echo "$c_status" | tr '[:lower:]' '[:upper:]')
-                if [ "$c_status" == "major_outage" ] || [ "$c_status" == "partial_outage" ]; then
-                  echo -e "    - ${c_name}: ${C_DANGER}${status_upper}${C_RESET}"
-                else
-                  echo -e "    - ${c_name}: ${C_WARN}${status_upper}${C_RESET}"
+          echo -e "  Status: ${C_ON}API Up (Verified as ${api_test})${C_RESET}"
+        fi
+        
+        echo ""
+        echo -e "${C_LABEL}[2] Querying GitHub Status page...${C_RESET}"
+        status_raw=$(curl -fsSL --max-time 5 https://www.githubstatus.com/api/v2/summary.json 2>/dev/null)
+        if [ -n "$status_raw" ]; then
+          indicator=$(echo "$status_raw" | grep -oP '"status":\{"indicator":"\K[^"]+')
+          desc=$(echo "$status_raw" | grep -oP '"status":\{"indicator":"[^"]+","description":"\K[^"]+')
+          if [ "$indicator" == "none" ]; then
+            echo -e "  Status: ${C_ON}All Systems Operational (${desc})${C_RESET}"
+          else
+            echo -e "  Status: ${C_DANGER}Incident detected: ${indicator^^} Outage (${desc})${C_RESET}"
+            echo ""
+            echo -e "  ${C_LABEL}Affected Components:${C_RESET}"
+            
+            # Match only individual components inside the "components" JSON array to avoid duplicating parent status objects.
+            # Array entries are wrapped like: {"id":"...","name":"...","status":"..."} and don't contain nested braces.
+            while IFS= read -r comp; do
+              if [ -n "$comp" ]; then
+                c_name=$(echo "$comp" | grep -oP '"name":"\K[^"]+')
+                c_status=$(echo "$comp" | grep -oP '"status":"\K[^"]+')
+                if [ -n "$c_name" ] && [ -n "$c_status" ] && [ "$c_status" != "operational" ]; then
+                  status_upper=$(echo "$c_status" | tr '[:lower:]' '[:upper:]')
+                  if [ "$c_status" == "major_outage" ] || [ "$c_status" == "partial_outage" ]; then
+                    echo -e "    - ${c_name}: ${C_DANGER}${status_upper}${C_RESET}"
+                  else
+                    echo -e "    - ${c_name}: ${C_WARN}${status_upper}${C_RESET}"
+                  fi
                 fi
               fi
-            fi
-          done < <(echo "$status_raw" | grep -oP '\{"id"[^\}]+\}' || true)
+            done < <(echo "$status_raw" | grep -oP '"components":\[\K.*(?=\],"vulnerability_alerts")' | grep -oP '\{[^\}]+\}' || true)
+          fi
+        else
+          echo -e "  Status: ${C_DANGER}Could not reach https://www.githubstatus.com${C_RESET}"
         fi
-      else
-        echo -e "  Status: ${C_DANGER}Could not reach https://www.githubstatus.com${C_RESET}"
-      fi
-      echo ""
-      read -n 1 -s -r -p "Press any key to continue..."
-      echo ""
-      refresh_status
-      continue
+        
+        echo ""
+        echo -e "${C_OFF}────────────────────────────────────────${C_RESET}"
+        echo -e "  ${C_HEADER}1)${C_RESET} Retest"
+        echo -e "  ${C_HEADER}2)${C_RESET} Refresh App"
+        echo -e "  ${C_HEADER}3)${C_RESET} Back to Menu"
+        echo ""
+        read -p "$(echo -e "${C_PROMPT}Choose an action: ${C_RESET}")" DIAG_CHOICE
+        case "$DIAG_CHOICE" in
+          1)
+            continue
+            ;;
+          2)
+            refresh_status
+            continue 2
+            ;;
+          3|*)
+            echo -e "${C_OFF}────────────────────────────────────────${C_RESET}"
+            refresh_status
+            continue 2
+            ;;
+        esac
+      done
       ;;
     1) SKIP_AUTO_SETUP=false; run_setup; refresh_status ;;
     2) push_changes; refresh_status ;;
