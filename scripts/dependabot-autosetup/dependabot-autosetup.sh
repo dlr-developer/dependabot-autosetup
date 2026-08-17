@@ -854,7 +854,7 @@ while true; do
   echo -e "  ${C_HEADER}4)${C_RESET} Run Dependabot check & pull updates"
   echo -e "  ${C_HEADER}5)${C_RESET} Uninstall dependabot-autosetup"
   if [ "$SHOW_OUTAGE_OPTS" == "true" ]; then
-    echo -e "  ${C_DANGER}t) Check GitHub Servers Status${C_RESET}"
+    echo -e "  ${C_HEADER}t)${C_RESET} ${C_DANGER}Check GitHub Servers Status${C_RESET}"
   fi
   echo -e "  ${C_HEADER}6)${C_RESET} Exit"
   read -p "$(echo -e "${C_PROMPT}> ${C_RESET}")" CHOICE
