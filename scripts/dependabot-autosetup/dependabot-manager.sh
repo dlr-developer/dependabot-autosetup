@@ -790,7 +790,11 @@ while true; do
   echo -e "     ${C_OFF}Add, delete, or review the parent directories on your machine where${C_RESET}"
   echo -e "     ${C_OFF}your projects are located.${C_RESET}"
   echo ""
-  echo -e "  ${C_HEADER}4)${C_RESET} Exit"
+  echo -e "  ${C_HEADER}4)${C_RESET} Configure Central Repo Setup (Local)"
+  echo -e "     ${C_OFF}Configure Dependabot settings and auto-merge features specifically${C_RESET}"
+  echo -e "     ${C_OFF}for the dependabot-autosetup utility manager repository.${C_RESET}"
+  echo ""
+  echo -e "  ${C_HEADER}5)${C_RESET} Exit"
   echo ""
   read -p "$(echo -e "${C_PROMPT}Choose an action: ${C_RESET}")" OPT
   case "$OPT" in
@@ -806,6 +810,11 @@ while true; do
       menu_configure_folders
       ;;
     4)
+      echo ""
+      echo -e "${C_OFF}Running local repository setup...${C_RESET}"
+      bash "${SELF_DIR}/dependabot-autosetup.sh"
+      ;;
+    5)
       echo -e "${C_ON}Goodbye!${C_RESET}"
       exit 0
       ;;
