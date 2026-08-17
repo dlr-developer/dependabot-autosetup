@@ -472,20 +472,25 @@ menu_unified_dashboard() {
         echo -e "  $((i+1)) ${unique_repos[$i]}"
       done
       echo ""
-      read -p "$(echo -e "${C_PROMPT}Select repository numbers (separated by space, or type 'all'): ${C_RESET}")" REPO_FILT_CHOICES
+      read -p "$(echo -e "${C_PROMPT}Select repository numbers (separated by space, or type 'all', or 'c' to cancel): ${C_RESET}")" REPO_FILT_CHOICES
       
-      local selected_indices=()
-      if [ "$REPO_FILT_CHOICES" = "all" ] || [ "$REPO_FILT_CHOICES" = "ALL" ]; then
-        for idx in "${!unique_repos[@]}"; do
-          selected_indices+=("$idx")
-        done
-      else
-        for choice in $REPO_FILT_CHOICES; do
-          if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#unique_repos[@]} ]; then
-            selected_indices+=($((choice-1)))
+      case "$REPO_FILT_CHOICES" in
+        c|C|cancel|CANCEL|"")
+          echo -e "${C_OFF}Cancelled repository selection.${C_RESET}"
+          ;;
+        *)
+          local selected_indices=()
+          if [ "$REPO_FILT_CHOICES" = "all" ] || [ "$REPO_FILT_CHOICES" = "ALL" ]; then
+            for idx in "${!unique_repos[@]}"; do
+              selected_indices+=("$idx")
+            done
+          else
+            for choice in $REPO_FILT_CHOICES; do
+              if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#unique_repos[@]} ]; then
+                selected_indices+=($((choice-1)))
+              fi
+            done
           fi
-        done
-      fi
 
       for s_idx in "${selected_indices[@]}"; do
         local chosen_rname="${unique_repos[$s_idx]}"
@@ -601,6 +606,8 @@ menu_unified_dashboard() {
           esac
         done
       done
+      ;;
+      esac
       ;;
     3)
       echo ""
