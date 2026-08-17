@@ -305,16 +305,23 @@ connect_github() {
   fi
 
   if [ "$HAVE_GH" == "true" ] && [ -n "$REPO_TARGET" ]; then
-    while ! gh repo view "$REPO_TARGET" >/dev/null 2>&1; do
-      SUGGESTED_REPO="${GH_ACCOUNT}/$(basename "$PWD")"
-      echo ""
-      echo -e "${C_DANGER}Repo '$REPO_TARGET' wasn't found on GitHub${C_RESET} (or you don't have access to it)."
-      echo -e "This folder is named ${C_LABEL}$(basename "$PWD")${C_RESET} -- did you mean ${C_LABEL}$SUGGESTED_REPO${C_RESET}?"
-      echo -e "  ${C_HEADER}1)${C_RESET} Create it now on GitHub"
-      echo -e "  ${C_HEADER}2)${C_RESET} Enter a different repo"
-      echo -e "  ${C_HEADER}3)${C_RESET} Skip -- work locally only"
-      read -p "$(echo -e "${C_PROMPT}> ${C_RESET}")" REPO_FIX_CHOICE
-      case $REPO_FIX_CHOICE in
+    local check_err
+    check_err=$(gh repo view "$REPO_TARGET" 2>&1 >/dev/null)
+    local check_status=$?
+    
+    if [ $check_status -ne 0 ] && [[ "$check_err" =~ "No server" || "$check_err" =~ "timeout" || "$check_err" =~ "502" || "$check_err" =~ "503" ]]; then
+      echo -e "${C_WARN}⚠️ GitHub API is currently unreachable. Skipping verification...${C_RESET}"
+    else
+      while ! gh repo view "$REPO_TARGET" >/dev/null 2>&1; do
+        SUGGESTED_REPO="${GH_ACCOUNT}/$(basename "$PWD")"
+        echo ""
+        echo -e "${C_DANGER}Repo '$REPO_TARGET' wasn't found on GitHub${C_RESET} (or you don't have access to it)."
+        echo -e "This folder is named ${C_LABEL}$(basename "$PWD")${C_RESET} -- did you mean ${C_LABEL}$SUGGESTED_REPO${C_RESET}?"
+        echo -e "  ${C_HEADER}1)${C_RESET} Create it now on GitHub"
+        echo -e "  ${C_HEADER}2)${C_RESET} Enter a different repo"
+        echo -e "  ${C_HEADER}3)${C_RESET} Skip -- work locally only"
+        read -p "$(echo -e "${C_PROMPT}> ${C_RESET}")" REPO_FIX_CHOICE
+        case $REPO_FIX_CHOICE in
         1)
           REPO_TARGET="$SUGGESTED_REPO"
           echo ""
@@ -348,8 +355,9 @@ connect_github() {
            ;;
         3) REPO_TARGET=""; break ;;
         *) echo -e "${C_DANGER}Invalid choice.${C_RESET}" ;;
-      esac
-    done
+        esac
+      done
+    fi
   fi
 
   if [ -n "$REPO_TARGET" ] && ! git remote get-url origin >/dev/null 2>&1; then
