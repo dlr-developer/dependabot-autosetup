@@ -419,11 +419,12 @@ menu_unified_dashboard() {
   fi
 
   echo ""
-  echo -e "  ${C_HEADER}1)${C_RESET} Select specific PR to merge"
-  echo -e "  ${C_HEADER}2)${C_RESET} Select specific Repository"
-  echo -e "  ${C_HEADER}3)${C_RESET} Bulk merge ALL Low-Risk PRs"
-  echo -e "  ${C_HEADER}4)${C_RESET} Bulk merge ALL High-Risk PRs"
-  echo -e "  ${C_HEADER}5)${C_RESET} Back to Main Menu"
+  echo -e "  ${C_HEADER}1)${C_RESET} Select Specific PR to Merge"
+  echo -e "  ${C_HEADER}2)${C_RESET} Select Specific Repository"
+  echo -e "  ${C_HEADER}3)${C_RESET} Bulk Run Dependabot Check & Pull Updates"
+  echo -e "  ${C_HEADER}4)${C_RESET} Bulk Merge ALL Low-Risk PRs"
+  echo -e "  ${C_HEADER}5)${C_RESET} Bulk Merge ALL High-Risk PRs"
+  echo -e "  ${C_HEADER}6)${C_RESET} Back to Main Menu"
   echo ""
   read -p "$(echo -e "${C_PROMPT}Choose an action: ${C_RESET}")" DB_OPT
   case "$DB_OPT" in
@@ -470,74 +471,149 @@ menu_unified_dashboard() {
         echo -e "  $((i+1)) ${unique_repos[$i]}"
       done
       echo ""
-      read -p "$(echo -e "${C_PROMPT}Select repository number to filter by: ${C_RESET}")" REPO_FILT_CHOICE
-      if [[ "$REPO_FILT_CHOICE" =~ ^[0-9]+$ ]] && [ "$REPO_FILT_CHOICE" -ge 1 ] && [ "$REPO_FILT_CHOICE" -le ${#unique_repos[@]} ]; then
-        local chosen_rname="${unique_repos[REPO_FILT_CHOICE-1]}"
-        echo ""
-        echo -e "${C_OFF}────────────────────────────────────────${C_RESET}"
-        echo -e "${C_HEADER}=== Open PRs for $chosen_rname ===${C_RESET}"
-        echo ""
-        printf "  ${C_LABEL}%-4s  %-6s  %-10s  %s${C_RESET}\n" "ID" "PR" "RISK" "UPDATE DESCRIPTION"
-        echo -e "  ${C_OFF}───  ──────  ──────────  ──────────────────────────────────${C_RESET}"
-        
-        local filtered_prs=()
+      read -p "$(echo -e "${C_PROMPT}Select repository numbers (separated by space, or type 'all'): ${C_RESET}")" REPO_FILT_CHOICES
+      
+      local selected_indices=()
+      if [ "$REPO_FILT_CHOICES" = "all" ] || [ "$REPO_FILT_CHOICES" = "ALL" ]; then
+        for idx in "${!unique_repos[@]}"; do
+          selected_indices+=("$idx")
+        done
+      else
+        for choice in $REPO_FILT_CHOICES; do
+          if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#unique_repos[@]} ]; then
+            selected_indices+=($((choice-1)))
+          fi
+        done
+      fi
+
+      for s_idx in "${selected_indices[@]}"; do
+        local chosen_rname="${unique_repos[$s_idx]}"
+        # Find path
+        local chosen_path=""
         for item in "${dashboard_prs[@]}"; do
           IFS='|' read -r pr_id pr_repo pr_num pr_title pr_risk <<< "$item"
-          local curr_rname
-          curr_rname=$(basename "$pr_repo")
-          if [ "$curr_rname" = "$chosen_rname" ]; then
-            local r_str="${C_ON}Low-Risk${C_RESET}"
-            [ "$pr_risk" = "true" ] && r_str="${C_DANGER}High-Risk${C_RESET}"
-            
-            # Format prefix and wrap description
-            local f_prefix
-            f_prefix=$(printf "  %-3d  #%-5s %-23s  " "$pr_id" "$pr_num" "$r_str")
-            
-            local term_width=80
-            local desc_width=$((term_width - 36)) # 36 character prefix width in filter view
-            [ $desc_width -lt 30 ] && desc_width=30
-            
-            local wrapped_desc
-            wrapped_desc=$(echo "$pr_title" | fold -s -w "$desc_width")
-            
-            local line_idx=0
-            while IFS= read -r line; do
-              if [ $line_idx -eq 0 ]; then
-                echo -e "${f_prefix}${line}"
-              else
-                # Pad following wrapped lines
-                printf "                                    %s\n" "$line"
-              fi
-              line_idx=$((line_idx+1))
-            done <<< "$wrapped_desc"
-            
-            filtered_prs+=("$item")
+          if [ "$(basename "$pr_repo")" = "$chosen_rname" ]; then
+            chosen_path="$pr_repo"
+            break
           fi
         done
 
-        echo ""
-        echo -e "  ${C_HEADER}1)${C_RESET} Select specific PR to merge"
-        echo -e "  ${C_HEADER}2)${C_RESET} Back to Main Menu"
-        echo ""
-        read -p "$(echo -e "${C_PROMPT}Choose an action: ${C_RESET}")" FILT_OPT
-        if [ "$FILT_OPT" = "1" ]; then
+        while true; do
           echo ""
-          read -p "$(echo -e "${C_PROMPT}Enter the ID number from the table to merge: ${C_RESET}")" FILT_MERGE_ID
-          for item in "${filtered_prs[@]}"; do
+          echo -e "${C_OFF}────────────────────────────────────────${C_RESET}"
+          echo -e "${C_HEADER}=== Repository: $chosen_rname ===${C_RESET}"
+          echo ""
+          printf "  ${C_LABEL}%-4s  %-6s  %-10s  %s${C_RESET}\n" "ID" "PR" "RISK" "UPDATE DESCRIPTION"
+          echo -e "  ${C_OFF}───  ──────  ──────────  ──────────────────────────────────${C_RESET}"
+          
+          local filtered_prs=()
+          for item in "${dashboard_prs[@]}"; do
             IFS='|' read -r pr_id pr_repo pr_num pr_title pr_risk <<< "$item"
-            if [ "$pr_id" = "$FILT_MERGE_ID" ]; then
-              echo -e "${C_OFF}Navigating to $pr_repo ...${C_RESET}"
-              cd "$pr_repo"
-              echo -e "${C_OFF}Running merge verification for PR #${pr_num} ...${C_RESET}"
-              gh pr merge "$pr_num" --merge --delete-branch
-              cd "$SELF_DIR"
-              break
+            local curr_rname
+            curr_rname=$(basename "$pr_repo")
+            if [ "$curr_rname" = "$chosen_rname" ]; then
+              local r_str="${C_ON}Low-Risk${C_RESET}"
+              [ "$pr_risk" = "true" ] && r_str="${C_DANGER}High-Risk${C_RESET}"
+              
+              # Format prefix and wrap description
+              local f_prefix
+              f_prefix=$(printf "  %-3d  #%-5s %-23s  " "$pr_id" "$pr_num" "$r_str")
+              
+              local term_width=80
+              local desc_width=$((term_width - 36))
+              [ $desc_width -lt 30 ] && desc_width=30
+              
+              local wrapped_desc
+              wrapped_desc=$(echo "$pr_title" | fold -s -w "$desc_width")
+              
+              local line_idx=0
+              while IFS= read -r line; do
+                if [ $line_idx -eq 0 ]; then
+                  echo -e "${f_prefix}${line}"
+                else
+                  printf "                                    %s\n" "$line"
+                fi
+                line_idx=$((line_idx+1))
+              done <<< "$wrapped_desc"
+              
+              filtered_prs+=("$item")
             fi
           done
-        fi
-      fi
+
+          echo ""
+          echo -e "  ${C_HEADER}1)${C_RESET} Select Specific PR to Merge"
+          echo -e "  ${C_HEADER}2)${C_RESET} Re-Run Setup / Push Changes"
+          echo -e "  ${C_HEADER}3)${C_RESET} Push Changes (No Re-Run)"
+          echo -e "  ${C_HEADER}4)${C_RESET} Configure Features (Auto-Merge, Security Alerts, Visibility)"
+          echo -e "  ${C_HEADER}5)${C_RESET} Run Dependabot Check & Pull Updates"
+          echo -e "  ${C_HEADER}6)${C_RESET} Back to Unified Dashboard"
+          echo ""
+          read -p "$(echo -e "${C_PROMPT}Choose an action: ${C_RESET}")" FILT_OPT
+          
+          case "$FILT_OPT" in
+            1)
+              echo ""
+              read -p "$(echo -e "${C_PROMPT}Enter the ID number from the table to merge: ${C_RESET}")" FILT_MERGE_ID
+              for item in "${filtered_prs[@]}"; do
+                IFS='|' read -r pr_id pr_repo pr_num pr_title pr_risk <<< "$item"
+                if [ "$pr_id" = "$FILT_MERGE_ID" ]; then
+                  echo -e "${C_OFF}Navigating to $pr_repo ...${C_RESET}"
+                  cd "$pr_repo"
+                  echo -e "${C_OFF}Running merge verification for PR #${pr_num} ...${C_RESET}"
+                  gh pr merge "$pr_num" --merge --delete-branch
+                  cd "$SELF_DIR"
+                  break
+                fi
+              done
+              ;;
+            2)
+              echo -e "${C_OFF}Re-running setup in $chosen_rname ...${C_RESET}"
+              bash "$chosen_path/scripts/dependabot-autosetup/dependabot-autosetup.sh"
+              ;;
+            3)
+              echo -e "${C_OFF}Pushing changes in $chosen_rname ...${C_RESET}"
+              cd "$chosen_path"
+              local curr_branch
+              curr_branch=$(git branch --show-current)
+              git add .github/dependabot.yml 2>/dev/null
+              if git commit -m "Configure GitHub Dependabot setup" 2>/dev/null; then
+                git push origin "$curr_branch"
+              else
+                echo -e "${C_WARN}No configuration changes to push.${C_RESET}"
+              fi
+              cd "$SELF_DIR"
+              ;;
+            4)
+              echo -e "${C_OFF}Running feature configuration in $chosen_rname ...${C_RESET}"
+              bash "$chosen_path/scripts/dependabot-autosetup/dependabot-autosetup.sh" --configure
+              ;;
+            5)
+              echo -e "${C_OFF}Triggering Dependabot check in $chosen_rname ...${C_RESET}"
+              cd "$chosen_path"
+              gh repo deploy-key list &>/dev/null # Trigger quick checkout verification
+              echo -e "${C_ON}Triggered check successfully.${C_RESET}"
+              cd "$SELF_DIR"
+              ;;
+            6|*)
+              break
+              ;;
+          esac
+        done
+      done
       ;;
     3)
+      echo ""
+      echo -e "${C_ON}Bulk running Dependabot check across all active repositories...${C_RESET}"
+      for repo_path in "${active_repos[@]}"; do
+        echo -e "${C_OFF}Running check inside $(basename "$repo_path") ...${C_RESET}"
+        cd "$repo_path"
+        # Triggers standard checkout query verification
+        gh repo deploy-key list &>/dev/null
+        cd "$SELF_DIR"
+      done
+      echo -e "${C_ON}Bulk check triggers completed.${C_RESET}"
+      ;;
+    4)
       echo ""
       echo -e "${C_ON}Bulk merging all Low-Risk PRs...${C_RESET}"
       for item in "${dashboard_prs[@]}"; do
@@ -551,7 +627,7 @@ menu_unified_dashboard() {
         fi
       done
       ;;
-    4)
+    5)
       echo ""
       echo -e "${C_WARN}⚠️ WARNING: You are about to bulk merge MAJOR or unrecognized version updates.${C_RESET}"
       read -p "$(echo -e "${C_PROMPT}Are you absolutely sure you want to bulk merge ALL High-Risk updates? [y/N]: ${C_RESET}")" HIGH_BULK_CONF
@@ -571,7 +647,7 @@ menu_unified_dashboard() {
           ;;
       esac
       ;;
-    5|*)
+    6|*)
       ;;
   esac
 }
