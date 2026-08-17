@@ -428,6 +428,7 @@ menu_unified_dashboard() {
   echo -e "  ${C_HEADER}6)${C_RESET} Back to Main Menu"
   echo ""
   read -p "$(echo -e "${C_PROMPT}Choose an action: ${C_RESET}")" DB_OPT
+  case "$DB_OPT" in
     1)
       echo ""
       read -p "$(echo -e "${C_PROMPT}Enter the ID number from the table to merge (e.g. 1-${dashboard_counter-1}, or 'c' to cancel): ${C_RESET}")" DB_MERGE_CHOICE
