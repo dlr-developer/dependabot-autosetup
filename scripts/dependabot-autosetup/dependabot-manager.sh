@@ -778,21 +778,21 @@ while true; do
   echo -e "  This control panel manages setting up and checking Dependabot updates"
   echo -e "  across all repositories in your configured scan directories."
   echo ""
-  echo -e "  ${C_HEADER}1)${C_RESET} View Unified PR Dashboard"
+  echo -e "  ${C_HEADER}1)${C_RESET} Configure Central Repo Setup (Local)"
+  echo -e "     ${C_OFF}Configure Dependabot settings and auto-merge features specifically${C_RESET}"
+  echo -e "     ${C_OFF}for the dependabot-autosetup utility manager repository.${C_RESET}"
+  echo ""
+  echo -e "  ${C_HEADER}2)${C_RESET} View Unified PR Dashboard"
   echo -e "     ${C_OFF}Show all open Dependabot PRs across all your repositories in one list,${C_RESET}"
   echo -e "     ${C_OFF}estimate update risks, and choose which ones to merge from here.${C_RESET}"
   echo ""
-  echo -e "  ${C_HEADER}2)${C_RESET} Run Multi-Repo Bulk Setup / Installer"
+  echo -e "  ${C_HEADER}3)${C_RESET} Run Multi-Repo Bulk Setup / Installer"
   echo -e "     ${C_OFF}Scan configured directories for Git repositories. See which ones have${C_RESET}"
   echo -e "     ${C_OFF}dependabot-autosetup installed, and bulk install or update them.${C_RESET}"
   echo ""
-  echo -e "  ${C_HEADER}3)${C_RESET} Configure Scan Directories"
+  echo -e "  ${C_HEADER}4)${C_RESET} Configure Scan Directories"
   echo -e "     ${C_OFF}Add, delete, or review the parent directories on your machine where${C_RESET}"
   echo -e "     ${C_OFF}your projects are located.${C_RESET}"
-  echo ""
-  echo -e "  ${C_HEADER}4)${C_RESET} Configure Central Repo Setup (Local)"
-  echo -e "     ${C_OFF}Configure Dependabot settings and auto-merge features specifically${C_RESET}"
-  echo -e "     ${C_OFF}for the dependabot-autosetup utility manager repository.${C_RESET}"
   echo ""
   echo -e "  ${C_HEADER}5)${C_RESET} Exit"
   echo ""
@@ -800,19 +800,19 @@ while true; do
   case "$OPT" in
     1)
       echo ""
+      echo -e "${C_OFF}Running local repository setup...${C_RESET}"
+      bash "${SELF_DIR}/dependabot-autosetup.sh"
+      ;;
+    2)
+      echo ""
       echo -e "${C_OFF}────────────────────────────────────────${C_RESET}"
       menu_unified_dashboard
       ;;
-    2)
+    3)
       menu_bulk_setup
       ;;
-    3)
-      menu_configure_folders
-      ;;
     4)
-      echo ""
-      echo -e "${C_OFF}Running local repository setup...${C_RESET}"
-      bash "${SELF_DIR}/dependabot-autosetup.sh"
+      menu_configure_folders
       ;;
     5)
       echo -e "${C_ON}Goodbye!${C_RESET}"
