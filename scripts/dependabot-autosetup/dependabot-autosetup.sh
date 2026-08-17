@@ -842,16 +842,62 @@ while true; do
     continue
   fi
 
+  local SHOW_OUTAGE_OPTS=false
+  if [ "$ALERTS_STATUS" == "outage" ]; then
+    SHOW_OUTAGE_OPTS=true
+  fi
+
   echo -e "${C_HEADER}Choose an action:${C_RESET}"
   echo -e "  ${C_HEADER}1)${C_RESET} Re-run setup / push changes"
   echo -e "  ${C_HEADER}2)${C_RESET} Push changes (no re-run)"
   echo -e "  ${C_HEADER}3)${C_RESET} Configure features (Auto-Merge, Security Alerts, Visibility)"
   echo -e "  ${C_HEADER}4)${C_RESET} Run Dependabot check & pull updates"
   echo -e "  ${C_HEADER}5)${C_RESET} Uninstall dependabot-autosetup"
+  if [ "$SHOW_OUTAGE_OPTS" == "true" ]; then
+    echo -e "  ${C_HEADER}t1)${C_RESET} Test GitHub API status"
+    echo -e "  ${C_HEADER}t2)${C_RESET} Test GitHub Status dashboard"
+  fi
   echo -e "  ${C_HEADER}6)${C_RESET} Exit"
   read -p "$(echo -e "${C_PROMPT}> ${C_RESET}")" CHOICE
 
   case $CHOICE in
+    t1|T1)
+      echo ""
+      echo -e "${C_OFF}Testing GitHub API connection...${C_RESET}"
+      local api_test
+      api_test=$(gh api user --jq .login 2>&1)
+      if [[ "$api_test" =~ "No server" || "$api_test" =~ "503" ]]; then
+        echo -e "${C_DANGER}GitHub API is down (503 Service Unavailable).${C_RESET}"
+      else
+        echo -e "${C_ON}GitHub API is operational. Sign in verified as: ${api_test}${C_RESET}"
+      fi
+      read -n 1 -s -r -p "Press any key to continue..."
+      echo ""
+      refresh_status
+      continue
+      ;;
+    t2|T2)
+      echo ""
+      echo -e "${C_OFF}Querying GitHub Status API...${C_RESET}"
+      local status_raw
+      status_raw=$(curl -fsSL --max-time 5 https://www.githubstatus.com/api/v2/summary.json 2>/dev/null)
+      if [ -n "$status_raw" ]; then
+        local indicator desc
+        indicator=$(echo "$status_raw" | grep -oP '"indicator":"\K[^"]+')
+        desc=$(echo "$status_raw" | grep -oP '"description":"\K[^"]+')
+        if [ "$indicator" == "none" ]; then
+          echo -e "${C_ON}All Systems Operational (${desc})${C_RESET}"
+        else
+          echo -e "${C_DANGER}Incident detected: ${indicator^^} Outage (${desc})${C_RESET}"
+        fi
+      else
+        echo -e "${C_DANGER}Could not reach GitHub Status page.${C_RESET}"
+      fi
+      read -n 1 -s -r -p "Press any key to continue..."
+      echo ""
+      refresh_status
+      continue
+      ;;
     1) SKIP_AUTO_SETUP=false; run_setup; refresh_status ;;
     2) push_changes; refresh_status ;;
     3)
