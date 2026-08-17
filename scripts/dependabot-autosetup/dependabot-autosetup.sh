@@ -85,7 +85,7 @@ if [ "$IS_MAIN_REPO" != "true" ]; then
     case "$UPDATE_CONF" in
       y|Y)
         echo -e "${C_OFF}Downloading updates...${C_RESET}"
-        if curl -fsSL "https://raw.githubusercontent.com/dlr-developer/dependabot-autosetup/main/scripts/dependabot-autosetup/install-dependabot-autosetup.sh" | bash -s -- --no-launch; then
+        if curl -fsSL "https://raw.githubusercontent.com/dlr-developer/dependabot-autosetup/main/scripts/dependabot-autosetup/install-dependabot-autosetup-manager.sh" | bash -s -- --no-launch; then
           echo -e "${C_ON}Updates downloaded and written locally.${C_RESET}"
           # Commit the updated files to the current repository
           git add scripts/dependabot-autosetup/ 2>/dev/null

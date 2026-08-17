@@ -24,7 +24,7 @@ Pick the command for whichever terminal you're already in -- `cd` into your proj
 cd your-project
 ```
 ```bash
-curl -fsSL https://raw.githubusercontent.com/dlr-developer/dependabot-autosetup/main/scripts/dependabot-autosetup/install-dependabot-autosetup.sh | bash
+curl -fsSL https://raw.githubusercontent.com/dlr-developer/dependabot-autosetup/main/scripts/dependabot-autosetup/install-dependabot-autosetup-manager.sh | bash
 ```
 
 **PowerShell:**
@@ -33,7 +33,7 @@ curl -fsSL https://raw.githubusercontent.com/dlr-developer/dependabot-autosetup/
 cd your-project
 ```
 ```powershell
-$bash = "$env:ProgramFiles\Git\bin\bash.exe"; if (!(Test-Path $bash)) { $bash = "${env:ProgramFiles(x86)}\Git\bin\bash.exe" }; & $bash -c "curl -fsSL https://raw.githubusercontent.com/dlr-developer/dependabot-autosetup/main/scripts/dependabot-autosetup/install-dependabot-autosetup.sh | bash"
+$bash = "$env:ProgramFiles\Git\bin\bash.exe"; if (!(Test-Path $bash)) { $bash = "${env:ProgramFiles(x86)}\Git\bin\bash.exe" }; & $bash -c "curl -fsSL https://raw.githubusercontent.com/dlr-developer/dependabot-autosetup/main/scripts/dependabot-autosetup/install-dependabot-autosetup-manager.sh | bash"
 ```
 
 **Command Prompt (cmd.exe):**
@@ -42,12 +42,12 @@ $bash = "$env:ProgramFiles\Git\bin\bash.exe"; if (!(Test-Path $bash)) { $bash = 
 cd your-project
 ```
 ```cmd
-"%ProgramFiles%\Git\bin\bash.exe" -c "curl -fsSL https://raw.githubusercontent.com/dlr-developer/dependabot-autosetup/main/scripts/dependabot-autosetup/install-dependabot-autosetup.sh | bash"
+"%ProgramFiles%\Git\bin\bash.exe" -c "curl -fsSL https://raw.githubusercontent.com/dlr-developer/dependabot-autosetup/main/scripts/dependabot-autosetup/install-dependabot-autosetup-manager.sh | bash"
 ```
 
 All three do the same thing -- PowerShell and cmd just hand the work to Git's own `bash.exe` directly instead of trying to understand `curl | bash` themselves, since that's bash syntax. All of them require [Git for Windows](https://git-scm.com/download/win) to be installed (Mac/Linux already have bash built in).
 
-This installs all five files -- `dependabot-autosetup.sh`, `dependabot-autosetup.bat`, `install-dependabot-autosetup.sh`, `README.md`, and `unblock-screenshot-windows.png` -- into `./scripts/dependabot-autosetup`, nested in its own folder so it never collides with other scripts already in your project's `scripts/` folder.
+This installs all five files -- `dependabot-autosetup.sh`, `dependabot-autosetup.bat`, `install-dependabot-autosetup-manager.sh`, `README.md`, and `unblock-screenshot-windows.png` -- into `./scripts/dependabot-autosetup`, nested in its own folder so it never collides with other scripts already in your project's `scripts/` folder.
 
 **It then launches the tool automatically** -- no second command needed. If you're in a non-interactive context where that's not possible (CI, automation, etc.), it skips straight to printing the manual command instead. To run it yourself later (or if auto-launch was skipped):
 
@@ -136,10 +136,10 @@ Requires [Git for Windows](https://git-scm.com/download/win) (the `.bat` launche
 
 ## 🎛️ Centralized Manager & Dashboard
 
-For users managing multiple projects, `dependabot-manager.sh` (or `dependabot-manager.bat` on Windows) acts as a unified control center:
+For users managing multiple projects, `dependabot-autosetup-manager.sh` (or `dependabot-autosetup-manager.bat` on Windows) acts as a unified control center:
 
 ### 1. Configure scan directories
-Choose custom folders to scan (e.g. `C:\Projects\Apps`, `C:\Projects\Websites`). The paths are saved locally in `dependabot-manager-config.json`.
+Choose custom folders to scan (e.g. `C:\Projects\Apps`, `C:\Projects\Websites`). The paths are saved locally in `dependabot-autosetup-manager-config.json`.
 
 ### 2. Multi-Repo Installer / Bulk setup
 Scans your directories for git repositories and detects whether the tool is installed and its version. You can check multiple projects to install or update files to the latest version in one click.
@@ -151,12 +151,12 @@ Launch the manager from your main tool directory:
 
 **Git Bash / macOS / Linux:**
 ```bash
-./scripts/dependabot-autosetup/dependabot-manager.sh
+./scripts/dependabot-autosetup/dependabot-autosetup-manager.sh
 ```
 
 **PowerShell:**
 ```powershell
-$bash = "$env:ProgramFiles\Git\bin\bash.exe"; if (!(Test-Path $bash)) { $bash = "${env:ProgramFiles(x86)}\Git\bin\bash.exe" }; & $bash scripts/dependabot-autosetup/dependabot-manager.sh
+$bash = "$env:ProgramFiles\Git\bin\bash.exe"; if (!(Test-Path $bash)) { $bash = "${env:ProgramFiles(x86)}\Git\bin\bash.exe" }; & $bash scripts/dependabot-autosetup/dependabot-autosetup-manager.sh
 ```
 
 ---

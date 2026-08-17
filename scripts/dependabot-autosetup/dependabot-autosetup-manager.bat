@@ -1,6 +1,6 @@
 @echo off
 setlocal
-rem dependabot-manager.bat -- launches dependabot-manager.sh via Git Bash.
+rem dependabot-autosetup-manager.bat -- launches dependabot-autosetup-manager.sh via Git Bash.
 rem Part of dependabot-autosetup: https://github.com/dlr-developer/dependabot-autosetup
 rem Not affiliated with GitHub or Dependabot.
 
@@ -13,6 +13,6 @@ if not exist "%BASH_EXE%" (
     exit /b 1
 )
 
-"%BASH_EXE%" -c "cd \"$(dirname \"$0\")\" && ./dependabot-manager.sh" "%~dp0dependabot-manager.sh"
+"%BASH_EXE%" -c "cd \"$(dirname \"$0\")\" && ./dependabot-autosetup-manager.sh" "%~dp0dependabot-autosetup-manager.sh"
 
 endlocal

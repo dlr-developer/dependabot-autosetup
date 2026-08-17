@@ -20,7 +20,7 @@ else
 fi
 
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
-CONFIG_FILE="${SELF_DIR}/dependabot-manager-config.json"
+CONFIG_FILE="${SELF_DIR}/dependabot-autosetup-manager-config.json"
 VERSION="1.1.0"
 
 # Parse config (saves chosen folders)
@@ -224,7 +224,7 @@ menu_bulk_setup() {
       "dependabot-autosetup.bat"
       "README.md"
       "unblock-screenshot-windows.png"
-      "install-dependabot-autosetup.sh"
+      "install-dependabot-autosetup-manager.sh"
     )
 
     case "$BULK_CHOICE" in

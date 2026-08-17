@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 #
-# install-dependabot-autosetup.sh -- installs all dependabot-autosetup files into
+# install-dependabot-autosetup-manager.sh -- installs all dependabot-autosetup files into
 # ./scripts/dependabot-autosetup (nested, so it never collides with other
 # scripts already in your project's scripts/ folder).
 # Part of dependabot-autosetup: https://github.com/dlr-developer/dependabot-autosetup
@@ -9,7 +9,7 @@ set -e
 
 BASE_URL="https://raw.githubusercontent.com/dlr-developer/dependabot-autosetup/main"
 SCRIPT_URL="$BASE_URL/scripts/dependabot-autosetup/dependabot-autosetup.sh"
-INSTALLER_URL="$BASE_URL/scripts/dependabot-autosetup/install-dependabot-autosetup.sh"
+INSTALLER_URL="$BASE_URL/scripts/dependabot-autosetup/install-dependabot-autosetup-manager.sh"
 README_URL="$BASE_URL/README.md"
 SCREENSHOT_URL="$BASE_URL/scripts/dependabot-autosetup/unblock-screenshot-windows.png"
 TARGET_DIR="scripts/dependabot-autosetup"
@@ -25,8 +25,8 @@ chmod +x "$TARGET_DIR/dependabot-autosetup.sh"
 
 # Keep a local copy of this installer too, so you can re-run it later to update
 # without needing to go back to the README for the command.
-curl -fsSL "$INSTALLER_URL" -o "$TARGET_DIR/install-dependabot-autosetup.sh" 2>/dev/null || echo "(Could not fetch install-dependabot-autosetup.sh -- not critical, continuing.)"
-chmod +x "$TARGET_DIR/install-dependabot-autosetup.sh" 2>/dev/null || true
+curl -fsSL "$INSTALLER_URL" -o "$TARGET_DIR/install-dependabot-autosetup-manager.sh" 2>/dev/null || echo "(Could not fetch install-dependabot-autosetup-manager.sh -- not critical, continuing.)"
+chmod +x "$TARGET_DIR/install-dependabot-autosetup-manager.sh" 2>/dev/null || true
 
 # Drop a copy of the README right next to the tool, so anyone who ends up with
 # just this folder (no root README nearby) still has the instructions.
@@ -64,7 +64,7 @@ echo ""
 echo "Done. Installed to ./$TARGET_DIR/:"
 echo "  dependabot-autosetup.sh"
 echo "  dependabot-autosetup.bat"
-echo "  install-dependabot-autosetup.sh"
+echo "  install-dependabot-autosetup-manager.sh"
 echo "  README.md"
 echo "  unblock-screenshot-windows.png"
 echo ""
