@@ -428,32 +428,41 @@ menu_unified_dashboard() {
   echo -e "  ${C_HEADER}6)${C_RESET} Back to Main Menu"
   echo ""
   read -p "$(echo -e "${C_PROMPT}Choose an action: ${C_RESET}")" DB_OPT
-  case "$DB_OPT" in
     1)
       echo ""
-      read -p "$(echo -e "${C_PROMPT}Enter the ID number from the table to merge (e.g. 1-${dashboard_counter-1}): ${C_RESET}")" DB_MERGE_CHOICE
-      if [[ "$DB_MERGE_CHOICE" =~ ^[0-9]+$ ]] && [ "$DB_MERGE_CHOICE" -ge 1 ] && [ "$DB_MERGE_CHOICE" -lt "$dashboard_counter" ]; then
-        # Parse target PR
-        local matching_pr=""
-        for item in "${dashboard_prs[@]}"; do
-          if [[ "$item" =~ ^${DB_MERGE_CHOICE}\| ]]; then
-            matching_pr="$item"
-            break
-          fi
-        done
+      read -p "$(echo -e "${C_PROMPT}Enter the ID number from the table to merge (e.g. 1-${dashboard_counter-1}, or 'c' to cancel): ${C_RESET}")" DB_MERGE_CHOICE
+      case "$DB_MERGE_CHOICE" in
+        c|C|cancel|CANCEL|"")
+          echo -e "${C_OFF}Cancelled merge operation.${C_RESET}"
+          ;;
+        *)
+          if [[ "$DB_MERGE_CHOICE" =~ ^[0-9]+$ ]] && [ "$DB_MERGE_CHOICE" -ge 1 ] && [ "$DB_MERGE_CHOICE" -lt "$dashboard_counter" ]; then
+            # Parse target PR
+            local matching_pr=""
+            for item in "${dashboard_prs[@]}"; do
+              if [[ "$item" =~ ^${DB_MERGE_CHOICE}\| ]]; then
+                matching_pr="$item"
+                break
+              fi
+            done
 
-        if [ -n "$matching_pr" ]; then
-          IFS='|' read -r pr_id pr_repo pr_num pr_title pr_risk <<< "$matching_pr"
-          echo -e "${C_OFF}Navigating to $pr_repo ...${C_RESET}"
-          cd "$pr_repo"
-          
-          echo -e "${C_OFF}Running merge verification for PR #${pr_num} ...${C_RESET}"
-          # Directly trigger target repo's dependabot merge flow
-          gh pr merge "$pr_num" --merge --delete-branch
-          
-          cd "$SELF_DIR"
-        fi
-      fi
+            if [ -n "$matching_pr" ]; then
+              IFS='|' read -r pr_id pr_repo pr_num pr_title pr_risk <<< "$matching_pr"
+              echo -e "${C_OFF}Navigating to $pr_repo ...${C_RESET}"
+              cd "$pr_repo"
+              
+              echo -e "${C_OFF}Running merge verification for PR #${pr_num} ...${C_RESET}"
+              # Directly trigger target repo's dependabot merge flow
+              gh pr merge "$pr_num" --merge --delete-branch
+              
+              cd "$SELF_DIR"
+            fi
+          else
+            echo -e "${C_DANGER}Invalid ID number: $DB_MERGE_CHOICE${C_RESET}"
+            read -n 1 -s -r -p "Press any key to continue..."
+          fi
+          ;;
+      esac
       ;;
     2)
       echo ""
@@ -559,18 +568,31 @@ menu_unified_dashboard() {
           case "$FILT_OPT" in
             1)
               echo ""
-              read -p "$(echo -e "${C_PROMPT}Enter the ID number from the table to merge: ${C_RESET}")" FILT_MERGE_ID
-              for item in "${filtered_prs[@]}"; do
-                IFS='|' read -r pr_id pr_repo pr_num pr_title pr_risk <<< "$item"
-                if [ "$pr_id" = "$FILT_MERGE_ID" ]; then
-                  echo -e "${C_OFF}Navigating to $pr_repo ...${C_RESET}"
-                  cd "$pr_repo"
-                  echo -e "${C_OFF}Running merge verification for PR #${pr_num} ...${C_RESET}"
-                  gh pr merge "$pr_num" --merge --delete-branch
-                  cd "$SELF_DIR"
-                  break
-                fi
-              done
+              read -p "$(echo -e "${C_PROMPT}Enter the ID number from the table to merge (or 'c' to cancel): ${C_RESET}")" FILT_MERGE_ID
+              case "$FILT_MERGE_ID" in
+                c|C|cancel|CANCEL|"")
+                  echo -e "${C_OFF}Cancelled merge operation.${C_RESET}"
+                  ;;
+                *)
+                  local matched_filt=false
+                  for item in "${filtered_prs[@]}"; do
+                    IFS='|' read -r pr_id pr_repo pr_num pr_title pr_risk <<< "$item"
+                    if [ "$pr_id" = "$FILT_MERGE_ID" ]; then
+                      echo -e "${C_OFF}Navigating to $pr_repo ...${C_RESET}"
+                      cd "$pr_repo"
+                      echo -e "${C_OFF}Running merge verification for PR #${pr_num} ...${C_RESET}"
+                      gh pr merge "$pr_num" --merge --delete-branch
+                      cd "$SELF_DIR"
+                      matched_filt=true
+                      break
+                    fi
+                  done
+                  if [ "$matched_filt" = "false" ]; then
+                    echo -e "${C_DANGER}Invalid ID number: $FILT_MERGE_ID${C_RESET}"
+                    read -n 1 -s -r -p "Press any key to continue..."
+                  fi
+                  ;;
+              esac
               ;;
             2)
               echo -e "${C_OFF}Re-running setup in $chosen_rname ...${C_RESET}"
