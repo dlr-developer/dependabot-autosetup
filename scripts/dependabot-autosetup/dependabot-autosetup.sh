@@ -883,6 +883,27 @@ while true; do
           echo -e "  Status: ${C_ON}All Systems Operational (${desc})${C_RESET}"
         else
           echo -e "  Status: ${C_DANGER}Incident detected: ${indicator^^} Outage (${desc})${C_RESET}"
+          echo ""
+          echo -e "  ${C_LABEL}Affected Components:${C_RESET}"
+          
+          # Simple regex matching for components with status other than "operational"
+          # summary.json contains array of: {"id":"...","name":"...","status":"..."}
+          # We extract names and statuses where status != "operational"
+          while IFS= read -r comp; do
+            if [ -n "$comp" ]; then
+              c_name=$(echo "$comp" | grep -oP '"name":"\K[^"]+')
+              c_status=$(echo "$comp" | grep -oP '"status":"\K[^"]+')
+              if [ -n "$c_name" ] && [ -n "$c_status" ] && [ "$c_status" != "operational" ]; then
+                # Uppercase status for visibility
+                status_upper=$(echo "$c_status" | tr '[:lower:]' '[:upper:]')
+                if [ "$c_status" == "major_outage" ] || [ "$c_status" == "partial_outage" ]; then
+                  echo -e "    - ${c_name}: ${C_DANGER}${status_upper}${C_RESET}"
+                else
+                  echo -e "    - ${c_name}: ${C_WARN}${status_upper}${C_RESET}"
+                fi
+              fi
+            fi
+          done < <(echo "$status_raw" | grep -oP '\{"id"[^\}]+\}' || true)
         fi
       else
         echo -e "  Status: ${C_DANGER}Could not reach https://www.githubstatus.com${C_RESET}"
