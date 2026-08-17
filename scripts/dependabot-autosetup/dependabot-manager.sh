@@ -300,29 +300,30 @@ menu_unified_dashboard() {
     return
   fi
 
-  echo -e "${C_OFF}Scanning repositories for open PRs...${C_RESET}"
-  local repos=()
-  while IFS= read -r line; do
-    [ -n "$line" ] && repos+=("$line")
-  done < <(scan_repositories)
-  
-  local active_repos=()
-  for r in "${repos[@]}"; do
-    local v
-    v=$(get_local_version "$r")
-    if [ "$v" != "none" ]; then
-      active_repos+=("$r")
+  while true; do
+    echo -e "${C_OFF}Scanning repositories for open PRs...${C_RESET}"
+    local repos=()
+    while IFS= read -r line; do
+      [ -n "$line" ] && repos+=("$line")
+    done < <(scan_repositories)
+    
+    local active_repos=()
+    for r in "${repos[@]}"; do
+      local v
+      v=$(get_local_version "$r")
+      if [ "$v" != "none" ]; then
+        active_repos+=("$r")
+      fi
+    done
+
+    if [ ${#active_repos[@]} -eq 0 ]; then
+      echo -e "${C_DANGER}No repositories have dependabot-autosetup installed.${C_RESET}"
+      return
     fi
-  done
 
-  if [ ${#active_repos[@]} -eq 0 ]; then
-    echo -e "${C_DANGER}No repositories have dependabot-autosetup installed.${C_RESET}"
-    return
-  fi
-
-  echo ""
-  echo -e "${C_HEADER}=== Unified Dependabot PR Dashboard ===${C_RESET}"
-  echo ""
+    echo ""
+    echo -e "${C_HEADER}=== Unified Dependabot PR Dashboard ===${C_RESET}"
+    echo ""
   
   # Render clean aligned table column headers
   printf "  ${C_LABEL}%-4s  %-15s  %-6s  %-12s  %s${C_RESET}\n" "ID" "REPOSITORY" "PR" "RISK" "UPDATE DESCRIPTION"
@@ -648,8 +649,10 @@ menu_unified_dashboard() {
       esac
       ;;
     6|*)
+      return
       ;;
   esac
+  done
 }
 
 # ================= Main Loop =================
