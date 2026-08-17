@@ -420,7 +420,7 @@ menu_unified_dashboard() {
 
   echo ""
   echo -e "  ${C_HEADER}1)${C_RESET} Select Specific PR to Merge"
-  echo -e "  ${C_HEADER}2)${C_RESET} Select Specific Repository"
+  echo -e "  ${C_HEADER}2)${C_RESET} Select Specific Repository(s)"
   echo -e "  ${C_HEADER}3)${C_RESET} Bulk Run Dependabot Check & Pull Updates"
   echo -e "  ${C_HEADER}4)${C_RESET} Bulk Merge ALL Low-Risk PRs"
   echo -e "  ${C_HEADER}5)${C_RESET} Bulk Merge ALL High-Risk PRs"
