@@ -139,7 +139,7 @@ Requires [Git for Windows](https://git-scm.com/download/win) (the `.bat` launche
 For users managing multiple projects, `dependabot-manager.sh` (or `dependabot-manager.bat` on Windows) acts as a unified control center:
 
 ### 1. Configure scan directories
-Choose custom folders to scan (e.g. `C:\Projects\Apps`, `C:\Projects\Websites`). The paths are saved locally in `manager-config.json`.
+Choose custom folders to scan (e.g. `C:\Projects\Apps`, `C:\Projects\Websites`). The paths are saved locally in `dependabot-manager-config.json`.
 
 ### 2. Multi-Repo Installer / Bulk setup
 Scans your directories for git repositories and detects whether the tool is installed and its version. You can check multiple projects to install or update files to the latest version in one click.

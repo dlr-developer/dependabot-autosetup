@@ -20,7 +20,7 @@ else
 fi
 
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
-CONFIG_FILE="${SELF_DIR}/manager-config.json"
+CONFIG_FILE="${SELF_DIR}/dependabot-manager-config.json"
 VERSION="1.1.0"
 
 # Parse config (saves chosen folders)
