@@ -401,10 +401,17 @@ refresh_status() {
 
   ALERTS_STATUS="unknown"
   if [ "$HAVE_GH" == "true" ] && [ -n "$REPO_TARGET" ]; then
+    local HTTP_RES
+    HTTP_RES=$(gh api -i "repos/$REPO_TARGET/vulnerability-alerts" 2>&1)
     local HTTP_CODE
-    HTTP_CODE=$(gh api -i "repos/$REPO_TARGET/vulnerability-alerts" 2>/dev/null | head -1 | awk '{print $2}')
-    [ "$HTTP_CODE" == "204" ] && ALERTS_STATUS="on"
-    [ "$HTTP_CODE" == "404" ] && ALERTS_STATUS="off"
+    HTTP_CODE=$(echo "$HTTP_RES" | head -1 | awk '{print $2}')
+    if [ "$HTTP_CODE" == "204" ]; then
+      ALERTS_STATUS="on"
+    elif [ "$HTTP_CODE" == "404" ]; then
+      ALERTS_STATUS="off"
+    elif [[ "$HTTP_RES" =~ "No server" || "$HTTP_CODE" =~ ^5 ]]; then
+      ALERTS_STATUS="outage"
+    fi
   fi
 
   REPO_VISIBILITY="unknown"
@@ -431,7 +438,15 @@ show_status() {
   echo -e "${C_LABEL}Auto-merge workflow pushed to GitHub:${C_RESET}     $gh_wf_disp"
   if [ "$RISK_MODE" == "low" ] || [ "$RISK_MODE" == "all" ]; then LOW_DISP="${C_ON}On${C_RESET}"; else LOW_DISP="${C_OFF}Off${C_RESET}"; fi
   if [ "$RISK_MODE" == "all" ]; then HIGH_DISP="${C_DANGER}On${C_RESET}"; else HIGH_DISP="${C_OFF}Off${C_RESET}"; fi
-  if [ "$ALERTS_STATUS" == "on" ]; then ALERT_DISP="${C_ON}On${C_RESET}"; elif [ "$ALERTS_STATUS" == "off" ]; then ALERT_DISP="${C_WARN}Off${C_RESET}"; else ALERT_DISP="${C_OFF}Unknown (GitHub not connected)${C_RESET}"; fi
+  if [ "$ALERTS_STATUS" == "on" ]; then
+    ALERT_DISP="${C_ON}On${C_RESET}"
+  elif [ "$ALERTS_STATUS" == "off" ]; then
+    ALERT_DISP="${C_WARN}Off${C_RESET}"
+  elif [ "$ALERTS_STATUS" == "outage" ]; then
+    ALERT_DISP="${C_DANGER}Unknown (GitHub Service Outage)${C_RESET}"
+  else
+    ALERT_DISP="${C_OFF}Unknown (GitHub not connected)${C_RESET}"
+  fi
   echo -e "${C_LABEL}Auto-merge low-risk (patch/minor):${C_RESET}        $LOW_DISP"
   echo -e "${C_LABEL}Auto-merge high-risk (major):${C_RESET}             $HIGH_DISP"
   echo -e "${C_LABEL}Security alert emails:${C_RESET}                    $ALERT_DISP"
