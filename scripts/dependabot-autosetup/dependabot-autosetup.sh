@@ -221,7 +221,14 @@ connect_github() {
     if gh auth status >/dev/null 2>&1; then
       HAVE_GH=true
       GH_ACCOUNT=$(gh api user --jq .login 2>/dev/null)
-      echo -e "${C_ON}Signed in to GitHub CLI as: ${GH_ACCOUNT:-unknown}${C_RESET}"
+      # Sanity check: if it returned a JSON error block or server down message
+      if [[ "$GH_ACCOUNT" =~ "message" ]] || [[ "$GH_ACCOUNT" =~ "{" ]] || [ -z "$GH_ACCOUNT" ]; then
+        # Try local git config as a guess, fallback to git username
+        GH_ACCOUNT=$(git config user.username 2>/dev/null)
+        [ -z "$GH_ACCOUNT" ] && GH_ACCOUNT=$(git config user.name 2>/dev/null | tr -d ' ')
+        [ -z "$GH_ACCOUNT" ] && GH_ACCOUNT="unknown"
+      fi
+      echo -e "${C_ON}Signed in to GitHub CLI as: ${GH_ACCOUNT}${C_RESET}"
     else
       echo ""
       echo -e "${C_WARN}gh CLI is installed but not signed in.${C_RESET} Repo verification and security alert toggling need this."
@@ -281,7 +288,7 @@ connect_github() {
   else
     echo ""
     echo -e "${C_WARN}No GitHub repo linked yet${C_RESET} (local folder: $(basename "$PWD"))."
-    SUGGESTED_REPO="${GH_ACCOUNT:-$(gh api user --jq .login 2>/dev/null)}/$(basename "$PWD")"
+    SUGGESTED_REPO="${GH_ACCOUNT}/$(basename "$PWD")"
     REPO_TARGET=""
     while [ -z "$REPO_TARGET" ] && [ "$GITHUB_SKIPPED" != "true" ]; do
       echo -e "  ${C_HEADER}1)${C_RESET} Use $SUGGESTED_REPO"
@@ -299,7 +306,7 @@ connect_github() {
 
   if [ "$HAVE_GH" == "true" ] && [ -n "$REPO_TARGET" ]; then
     while ! gh repo view "$REPO_TARGET" >/dev/null 2>&1; do
-      SUGGESTED_REPO="${GH_ACCOUNT:-$(gh api user --jq .login 2>/dev/null)}/$(basename "$PWD")"
+      SUGGESTED_REPO="${GH_ACCOUNT}/$(basename "$PWD")"
       echo ""
       echo -e "${C_DANGER}Repo '$REPO_TARGET' wasn't found on GitHub${C_RESET} (or you don't have access to it)."
       echo -e "This folder is named ${C_LABEL}$(basename "$PWD")${C_RESET} -- did you mean ${C_LABEL}$SUGGESTED_REPO${C_RESET}?"
