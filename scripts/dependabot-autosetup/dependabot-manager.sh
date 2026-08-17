@@ -218,7 +218,7 @@ menu_bulk_setup() {
     echo -e "  ${C_HEADER}6)${C_RESET} Back to Main Menu"
     echo ""
     read -p "$(echo -e "${C_PROMPT}Choose an action: ${C_RESET}")" BULK_CHOICE
-    
+
     local files_to_copy=(
       "dependabot-autosetup.sh"
       "dependabot-autosetup.bat"
@@ -230,7 +230,7 @@ menu_bulk_setup() {
     case "$BULK_CHOICE" in
       1)
         echo ""
-        read -p "$(echo -e "${C_PROMPT}Enter list numbers to install (separated by space, e.g. 1 3, or 'c' to cancel): ${C_RESET}")" RUN_LIST
+        read -p "$(echo -e "${C_PROMPT}Enter list numbers to configure/install (separated by space, e.g. 1 3, or 'c' to cancel): ${C_RESET}")" RUN_LIST
         case "$RUN_LIST" in
           c|C|cancel|CANCEL|"")
             echo -e "${C_OFF}Cancelled installer.${C_RESET}"
@@ -239,17 +239,80 @@ menu_bulk_setup() {
             for selected in $RUN_LIST; do
               if [[ "$selected" =~ ^[0-9]+$ ]] && [ "$selected" -ge 1 ] && [ "$selected" -le ${#filtered_repos[@]} ]; then
                 local target_repo="${filtered_repos[selected-1]}"
-                # Auto init git if missing
-                if [ ! -d "$target_repo/.git" ]; then
-                  echo -e "${C_WARN}Initializing git repository inside $target_repo ...${C_RESET}"
-                  git -C "$target_repo" init -q -b main 2>/dev/null || git -C "$target_repo" init -q
-                fi
-                echo -e "${C_OFF}Installing/updating in $target_repo ...${C_RESET}"
-                mkdir -p "$target_repo/scripts/dependabot-autosetup"
-                for f in "${files_to_copy[@]}"; do
-                  cp "${SELF_DIR}/$f" "$target_repo/scripts/dependabot-autosetup/" 2>/dev/null
+                local target_rname
+                target_rname=$(basename "$target_repo")
+                
+                # Nested configuration submenu options loop for selected repo
+                local inner_exit=false
+                while [ "$inner_exit" = "false" ]; do
+                  echo ""
+                  echo -e "${C_OFF}────────────────────────────────────────${C_RESET}"
+                  echo -e "${C_HEADER}=== Repository: $target_rname ===${C_RESET}"
+                  echo ""
+                  echo -e "  ${C_HEADER}1)${C_RESET} Re-Run Setup / Push Changes"
+                  echo -e "  ${C_HEADER}2)${C_RESET} Push Changes (No Re-Run)"
+                  echo -e "  ${C_HEADER}3)${C_RESET} Configure Features (Auto-Merge, Security Alerts, Visibility)"
+                  echo -e "  ${C_HEADER}4)${C_RESET} Run Dependabot Check & Pull Updates"
+                  echo -e "  ${C_HEADER}5)${C_RESET} Back to Multi-Repo Setup"
+                  echo ""
+                  read -p "$(echo -e "${C_PROMPT}Choose an action: ${C_RESET}")" SUB_OPT
+                  case "$SUB_OPT" in
+                    1)
+                      # Auto init git if missing
+                      if [ ! -d "$target_repo/.git" ]; then
+                        echo -e "${C_WARN}Initializing git repository inside $target_repo ...${C_RESET}"
+                        git -C "$target_repo" init -q -b main 2>/dev/null || git -C "$target_repo" init -q
+                      fi
+                      echo -e "${C_OFF}Re-running setup in $target_rname ...${C_RESET}"
+                      mkdir -p "$target_repo/scripts/dependabot-autosetup"
+                      for f in "${files_to_copy[@]}"; do
+                        cp "${SELF_DIR}/$f" "$target_repo/scripts/dependabot-autosetup/" 2>/dev/null
+                      done
+                      bash "$target_repo/scripts/dependabot-autosetup/dependabot-autosetup.sh"
+                      ;;
+                    2)
+                      # Auto init git if missing
+                      if [ ! -d "$target_repo/.git" ]; then
+                        echo -e "${C_WARN}Initializing git repository inside $target_repo ...${C_RESET}"
+                        git -C "$target_repo" init -q -b main 2>/dev/null || git -C "$target_repo" init -q
+                      fi
+                      echo -e "${C_OFF}Pushing changes in $target_rname ...${C_RESET}"
+                      cd "$target_repo"
+                      local curr_branch
+                      curr_branch=$(git branch --show-current)
+                      git add .github/dependabot.yml 2>/dev/null
+                      if git commit -m "Configure GitHub Dependabot setup" 2>/dev/null; then
+                        git push origin "$curr_branch"
+                      else
+                        echo -e "${C_WARN}No configuration changes to push.${C_RESET}"
+                      fi
+                      cd "$SELF_DIR"
+                      ;;
+                    3)
+                      # Auto init git if missing
+                      if [ ! -d "$target_repo/.git" ]; then
+                        echo -e "${C_WARN}Initializing git repository inside $target_repo ...${C_RESET}"
+                        git -C "$target_repo" init -q -b main 2>/dev/null || git -C "$target_repo" init -q
+                      fi
+                      echo -e "${C_OFF}Running feature configuration in $target_rname ...${C_RESET}"
+                      mkdir -p "$target_repo/scripts/dependabot-autosetup"
+                      for f in "${files_to_copy[@]}"; do
+                        cp "${SELF_DIR}/$f" "$target_repo/scripts/dependabot-autosetup/" 2>/dev/null
+                      done
+                      bash "$target_repo/scripts/dependabot-autosetup/dependabot-autosetup.sh" --configure
+                      ;;
+                    4)
+                      echo -e "${C_OFF}Triggering Dependabot check in $target_rname ...${C_RESET}"
+                      cd "$target_repo"
+                      gh repo deploy-key list &>/dev/null
+                      echo -e "${C_ON}Triggered check successfully.${C_RESET}"
+                      cd "$SELF_DIR"
+                      ;;
+                    5|*)
+                      inner_exit=true
+                      ;;
+                  esac
                 done
-                echo -e "${C_ON}Installed inside $(basename "$target_repo")${C_RESET}"
               else
                 echo -e "${C_DANGER}Invalid selection: $selected${C_RESET}"
               fi
