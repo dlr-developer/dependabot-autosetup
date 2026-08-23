@@ -13,7 +13,7 @@ jobs:
     if: github.repository_owner == 'dlr-developer'
     steps:
       - name: Checkout Source Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Propagate to Target Repositories
         env:
